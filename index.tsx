@@ -13,13 +13,33 @@ const visionModel = 'gemini-2.5-flash';
 
 // Array of different poses to generate
 const poses = [
+  // Combat / Action
   'in a dynamic high-kick pose',
-  'in a graceful crane stance, balancing on one leg',
+  'launching a powerful uppercut',
   'wielding a long wooden bo staff in a defensive stance',
+  'drawing a sword from its sheath',
+  'aiming a bow and arrow',
+  'casting a magic spell with glowing hands',
+  
+  // Stances
+  'in a graceful crane stance, balancing on one leg',
   'in a low, powerful horse stance with fists ready',
   'in a classic praying mantis style pose',
-  'executing a fluid snake style movement, low to the ground'
+  'executing a fluid snake style movement, low to the ground',
+
+  // Dramatic / Emotive
+  'standing on a cliff edge, cape billowing in the wind',
+  'looking over their shoulder with a mysterious expression',
+  'raising a triumphant fist to the sky',
+  'kneeling in defeat, head bowed',
+  
+  // Relaxing / Casual
+  'leaning against a wall, arms crossed casually',
+  'sitting by a campfire, looking thoughtful',
+  'reading a book in a comfortable chair',
+  'walking through a bustling city street'
 ];
+
 
 /**
  * Converts a file to a base64 string.
