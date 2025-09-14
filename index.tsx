@@ -40,6 +40,20 @@ const poses = [
   'walking through a bustling city street'
 ];
 
+// Array of different expressions
+const expressions = [
+  'a neutral expression',
+  'a slight smile',
+  'a joyful grin',
+  'a determined grit',
+  'an angry scowl',
+  'a surprised look',
+  'a sad frown',
+  'a thoughtful and pensive look',
+  'a mischievous smirk',
+  'a serene and calm expression'
+];
+
 
 /**
  * Converts a file to a base64 string.
@@ -210,7 +224,8 @@ async function main() {
             loadingIndicator.style.display = 'block';
 
             for (const pose of poses) {
-                const fullPrompt = `${basePrompt} Using the provided image as a strict reference for the character's face, appearance, and art style, redraw the character ${pose}. Do not alter the character's identity.`;
+                const expression = expressions[Math.floor(Math.random() * expressions.length)];
+                const fullPrompt = `${basePrompt} Using the provided image as a strict reference for the character's face, appearance, and art style, redraw the character ${pose}. The character should have ${expression} on their face. Do not alter the character's identity.`;
                 await generateAndDisplayImage(fullPrompt, uploadedFileParts.base64, uploadedFileParts.mimeType, imageGallery);
             }
 
