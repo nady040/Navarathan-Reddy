@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Pose Generator</title>
+    <link rel="stylesheet" href="index.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai@1.0.0"
+        }
+      }
+    </script>
+</head>
+<body>
+    <h1>Dynamic Pose Generator</h1>
+    <div id="controls">
+        <label for="image-upload" class="upload-label">Upload Your Character Image</label>
+        <input type="file" id="image-upload" accept="image/*">
+        <button id="generate-button">Generate Poses</button>
+    </div>
+    <p id="loading-indicator"></p>
+    <div id="image-gallery"></div>
+    <script type="module" src="index.tsx"></script>
+</body>
+</html>

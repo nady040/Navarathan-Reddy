@@ -1,0 +1,5 @@
+{
+  "name": "pose generator",
+  "description": "upload and get poses ",
+  "requestFramePermissions": []
+}
