@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {GoogleGenAI, GeneratedImage, PersonGeneration} from '@google/genai';
+import {GoogleGenAI, Modality} from '@google/genai';
 
 const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
-const imageModel = 'imagen-4.0-generate-001';
+const imageEditModel = 'gemini-2.5-flash-image-preview';
 const visionModel = 'gemini-2.5-flash';
 
 // Array of different poses to generate
@@ -49,7 +49,7 @@ async function generateDescriptionFromImage(base64Image: string, mimeType: strin
         contents: {
             parts: [
                 {
-                    text: 'Create a highly detailed and specific character reference prompt for an image generation model, designed to consistently recreate the character in different poses. Describe the character\'s physical features (face shape, eye color, hair style and color), their exact clothing including specific designs or accessories, the detailed anime-inspired art style, the precise color palette, and the background atmosphere. The output should be a single, cohesive paragraph that can be used directly as a base prompt.'
+                    text: 'Act as an expert character concept artist. Your goal is to create a "character sheet" prompt that ensures perfect consistency for an image generation model. Focus obsessively on the face. Break down every facial feature with extreme detail: eye shape (e.g., "almond-shaped," "hooded"), eye color (be specific, e.g., "emerald green with gold flecks"), nose bridge and tip, lip shape and fullness, jawline (e.g., "sharp," "soft"), and any unique markers like freckles or scars. After the face, describe hair style and color, then clothing in detail. Conclude with the art style (e.g., "modern anime style with soft lighting"). The output must be a single, dense paragraph, ready to be used as a base prompt.'
                 },
                 {
                     inlineData: {
@@ -65,69 +65,133 @@ async function generateDescriptionFromImage(base64Image: string, mimeType: strin
 
 
 /**
- * Generates a single image based on a prompt and appends it to the gallery.
+ * Generates a single image based on a reference image and a prompt, then appends it to the gallery.
  * @param {string} prompt The full prompt for image generation.
+ * @param {string} base64Image The base64 encoded reference image.
+ * @param {string} mimeType The mime type of the reference image.
  * @param {HTMLElement} imageGallery The gallery element to append the image to.
  */
-async function generateAndDisplayImage(prompt: string, imageGallery: HTMLElement) {
-    const response = await ai.models.generateImages({
-        model: imageModel,
-        prompt: prompt,
+async function generateAndDisplayImage(prompt: string, base64Image: string, mimeType: string, imageGallery: HTMLElement) {
+    const response = await ai.models.generateContent({
+        model: imageEditModel,
+        contents: {
+            parts: [
+                {
+                    inlineData: {
+                        data: base64Image,
+                        mimeType: mimeType,
+                    },
+                },
+                { text: prompt },
+            ],
+        },
         config: {
-            numberOfImages: 1,
-            aspectRatio: '4:3',
-            personGeneration: PersonGeneration.ALLOW_ADULT,
-            outputMimeType: 'image/jpeg',
-            includeRaiReason: true,
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
         },
     });
 
-    if (response?.generatedImages) {
-        response.generatedImages.forEach((generatedImage: GeneratedImage) => {
-            if (generatedImage.image?.imageBytes) {
-                const src = `data:image/jpeg;base64,${generatedImage.image.imageBytes}`;
+    if (response?.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                const src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
                 const img = new Image();
                 img.src = src;
                 img.alt = prompt;
                 imageGallery.appendChild(img);
+                break; // Assume one image is generated per call
             }
-        });
+        }
     }
-    console.log('Full response for prompt:', prompt, response);
 }
 
 async function main() {
-    const imageGallery = document.getElementById('image-gallery');
-    const loadingIndicator = document.getElementById('loading-indicator');
     const imageUpload = document.getElementById('image-upload') as HTMLInputElement;
-    const generateButton = document.getElementById('generate-button');
+    const analyzeButton = document.getElementById('analyze-button') as HTMLButtonElement;
+    const descriptionSection = document.getElementById('description-section');
+    const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
+    const promptInput = document.getElementById('prompt-input') as HTMLTextAreaElement;
+    const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const imageGallery = document.getElementById('image-gallery');
 
-    if (!imageGallery || !loadingIndicator || !imageUpload || !generateButton) {
+    if (!imageUpload || !analyzeButton || !descriptionSection || !imagePreview || !promptInput || !generateButton || !loadingIndicator || !imageGallery) {
         console.error('Required HTML elements not found.');
         return;
     }
 
-    generateButton.addEventListener('click', async () => {
-        const file = imageUpload.files?.[0];
-        if (!file) {
+    let uploadedFile: File | null = null;
+    let uploadedFileParts: { base64: string, mimeType: string } | null = null;
+
+    imageUpload.addEventListener('change', () => {
+        if (imageUpload.files && imageUpload.files.length > 0) {
+            uploadedFile = imageUpload.files[0];
+            analyzeButton.disabled = false;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(uploadedFile);
+            // Reset state
+            uploadedFileParts = null;
+            descriptionSection.classList.add('hidden');
+            promptInput.value = '';
+
+        } else {
+            uploadedFile = null;
+            analyzeButton.disabled = true;
+        }
+    });
+
+    analyzeButton.addEventListener('click', async () => {
+        if (!uploadedFile) {
             alert('Please upload an image first.');
             return;
         }
 
         try {
-            imageGallery.textContent = '';
+            analyzeButton.disabled = true;
             loadingIndicator.style.color = '#f0f0f0';
-            loadingIndicator.textContent = 'Analyzing image...';
+            loadingIndicator.textContent = 'Analyzing character...';
             loadingIndicator.style.display = 'block';
 
-            const { base64, mimeType } = await fileToGenerativePart(file);
-            const basePrompt = await generateDescriptionFromImage(base64, mimeType);
+            uploadedFileParts = await fileToGenerativePart(uploadedFile);
+            const description = await generateDescriptionFromImage(uploadedFileParts.base64, uploadedFileParts.mimeType);
             
+            promptInput.value = description;
+            descriptionSection.classList.remove('hidden');
+            loadingIndicator.style.display = 'none';
+
+        } catch (error) {
+            console.error("Error during analysis:", error);
+            loadingIndicator.textContent = 'Error: Could not analyze image. Check the console.';
+            loadingIndicator.style.color = 'red';
+        } finally {
+             analyzeButton.disabled = false;
+        }
+    });
+
+    generateButton.addEventListener('click', async () => {
+        const basePrompt = promptInput.value.trim();
+        if (!basePrompt) {
+            alert('The description cannot be empty.');
+            return;
+        }
+
+        if (!uploadedFileParts) {
+            alert('Analysis data is missing. Please re-upload and analyze the image.');
+            return;
+        }
+
+        try {
+            generateButton.disabled = true;
+            imageGallery.textContent = '';
+            loadingIndicator.style.color = '#f0f0f0';
             loadingIndicator.textContent = 'Generating different poses, this may take a moment...';
+            loadingIndicator.style.display = 'block';
 
             for (const pose of poses) {
-                const fullPrompt = `${basePrompt} Show the character ${pose}.`;
-                await generateAndDisplayImage(fullPrompt, imageGallery);
+                const fullPrompt = `${basePrompt} Using the provided image as a strict reference for the character's face, appearance, and art style, redraw the character ${pose}. Do not alter the character's identity.`;
+                await generateAndDisplayImage(fullPrompt, uploadedFileParts.base64, uploadedFileParts.mimeType, imageGallery);
             }
 
             loadingIndicator.style.display = 'none';
@@ -136,6 +200,8 @@ async function main() {
             console.error("Error during generation process:", error);
             loadingIndicator.textContent = 'Error: Could not load images. Check the console for details.';
             loadingIndicator.style.color = 'red';
+        } finally {
+            generateButton.disabled = false;
         }
     });
 }

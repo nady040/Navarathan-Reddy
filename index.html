@@ -16,10 +16,21 @@
 <body>
     <h1>Dynamic Pose Generator</h1>
     <div id="controls">
-        <label for="image-upload" class="upload-label">Upload Your Character Image</label>
+        <label for="image-upload" class="upload-label">1. Upload Your Character Image</label>
         <input type="file" id="image-upload" accept="image/*">
+        <button id="analyze-button" disabled>Analyze Character</button>
+    </div>
+
+    <div id="description-section" class="hidden">
+        <h2>2. Refine Character Description</h2>
+        <p>Edit the description below to improve character consistency, especially the face.</p>
+        <div id="description-editor">
+            <img id="image-preview" src="#" alt="Your uploaded character" />
+            <textarea id="prompt-input" rows="15" placeholder="AI-generated description will appear here..."></textarea>
+        </div>
         <button id="generate-button">Generate Poses</button>
     </div>
+
     <p id="loading-indicator"></p>
     <div id="image-gallery"></div>
     <script type="module" src="index.tsx"></script>
