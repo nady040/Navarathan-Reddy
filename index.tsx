@@ -139,6 +139,7 @@ async function generateAndDisplayImage(prompt: string, base64Image: string, mime
 }
 
 async function main() {
+    // Main page elements
     const imageUpload = document.getElementById('image-upload') as HTMLInputElement;
     const analyzeButton = document.getElementById('analyze-button') as HTMLButtonElement;
     const descriptionSection = document.getElementById('description-section');
@@ -147,8 +148,10 @@ async function main() {
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
     const loadingIndicator = document.getElementById('loading-indicator');
     const imageGallery = document.getElementById('image-gallery');
+    const customPosesInput = document.getElementById('custom-poses-input') as HTMLTextAreaElement;
 
-    if (!imageUpload || !analyzeButton || !descriptionSection || !imagePreview || !promptInput || !generateButton || !loadingIndicator || !imageGallery) {
+
+    if (!imageUpload || !analyzeButton || !descriptionSection || !imagePreview || !promptInput || !generateButton || !loadingIndicator || !imageGallery || !customPosesInput) {
         console.error('Required HTML elements not found.');
         return;
     }
@@ -204,7 +207,11 @@ async function main() {
         }
     });
 
-    generateButton.addEventListener('click', async () => {
+    /**
+     * Kicks off the image generation process with a given set of poses.
+     * @param posesToGenerate An array of pose description strings.
+     */
+    async function startGeneration(posesToGenerate: string[]) {
         const basePrompt = promptInput.value.trim();
         if (!basePrompt) {
             alert('The description cannot be empty.');
@@ -215,15 +222,15 @@ async function main() {
             alert('Analysis data is missing. Please re-upload and analyze the image.');
             return;
         }
-
+        
         try {
             generateButton.disabled = true;
             imageGallery.textContent = '';
             loadingIndicator.style.color = '#f0f0f0';
-            loadingIndicator.textContent = 'Generating different poses, this may take a moment...';
+            loadingIndicator.textContent = `Generating ${posesToGenerate.length} poses, this may take a moment...`;
             loadingIndicator.style.display = 'block';
 
-            for (const pose of poses) {
+            for (const pose of posesToGenerate) {
                 const expression = expressions[Math.floor(Math.random() * expressions.length)];
                 const fullPrompt = `${basePrompt} Using the provided image as a strict reference for the character's face, appearance, and art style, redraw the character ${pose}. The character should have ${expression} on their face. Do not alter the character's identity.`;
                 await generateAndDisplayImage(fullPrompt, uploadedFileParts.base64, uploadedFileParts.mimeType, imageGallery);
@@ -237,6 +244,27 @@ async function main() {
             loadingIndicator.style.color = 'red';
         } finally {
             generateButton.disabled = false;
+        }
+    }
+    
+    generateButton.addEventListener('click', () => {
+        const customPosesText = customPosesInput.value.trim();
+        let posesToGenerate: string[];
+
+        if (customPosesText) {
+            posesToGenerate = customPosesText
+                .split('\n')
+                .map(p => p.trim())
+                .filter(p => p.length > 0);
+        } else {
+            // Use default poses if the input is empty
+            posesToGenerate = poses; 
+        }
+        
+        if (posesToGenerate.length > 0) {
+            startGeneration(posesToGenerate);
+        } else {
+            alert('Please enter at least one pose description, or leave the box empty to use the default poses.');
         }
     });
 }
