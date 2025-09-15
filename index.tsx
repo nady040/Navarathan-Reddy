@@ -258,9 +258,17 @@ async function main() {
                 .filter(p => p.length > 0);
         } else {
             // Use default poses if the input is empty
-            posesToGenerate = poses; 
+            posesToGenerate = poses;
         }
-        
+
+        const maxPoses = 10;
+        if (posesToGenerate.length > maxPoses) {
+            if (customPosesText) { // Only show alert if user provided custom poses
+                alert(`You have entered ${posesToGenerate.length} poses. The maximum number of poses allowed is ${maxPoses}. Only the first ${maxPoses} will be generated.`);
+            }
+            posesToGenerate = posesToGenerate.slice(0, maxPoses);
+        }
+
         if (posesToGenerate.length > 0) {
             startGeneration(posesToGenerate);
         } else {
