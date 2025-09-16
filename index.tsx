@@ -12,7 +12,7 @@ const imageEditModel = 'gemini-2.5-flash-image-preview';
 const visionModel = 'gemini-2.5-flash';
 
 // Array of different poses for two characters
-const poses = [
+const twoCharacterPoses = [
   'shaking hands',
   'standing back-to-back, ready for a fight',
   'clashing swords in a dramatic duel',
@@ -23,6 +23,19 @@ const poses = [
   'working together to build a campfire',
   'in a tense standoff, staring each other down',
   'celebrating a victory with a high-five',
+];
+
+const singleCharacterPoses = [
+  'waving hello cheerfully',
+  'reading a book in a cozy chair',
+  'looking up at the stars thoughtfully',
+  'practicing a cool fighting stance',
+  'drinking a cup of coffee or tea',
+  'laughing heartily',
+  'running through a field of flowers',
+  'striking a heroic pose on a cliff edge',
+  'looking determined and ready for action',
+  'meditating peacefully',
 ];
 
 // Array of different expressions
@@ -84,22 +97,25 @@ async function generateDescriptionFromImage(base64Image: string, mimeType: strin
 
 
 /**
- * Generates a single image based on two reference images and a prompt.
+ * Generates a single image based on one or two reference images and a prompt.
  * @param {string} prompt The full prompt for image generation.
  * @param {object} imageParts1 The generative parts for character 1.
- * @param {object} imageParts2 The generative parts for character 2.
+ * @param {object | null} imageParts2 The generative parts for character 2.
  * @param {HTMLElement} imageGallery The gallery element to append the image to.
  */
-async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string }, imageGallery: HTMLElement) {
+async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imageGallery: HTMLElement) {
+    const parts: ({ inlineData: { data: string; mimeType: string; }; } | { text: string; })[] = [
+        { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
+    ];
+
+    if (imageParts2) {
+        parts.push({ inlineData: { data: imageParts2.base64, mimeType: imageParts2.mimeType } });
+    }
+    parts.push({ text: prompt });
+    
     const response = await ai.models.generateContent({
         model: imageEditModel,
-        contents: {
-            parts: [
-                { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
-                { inlineData: { data: imageParts2.base64, mimeType: imageParts2.mimeType } },
-                { text: prompt },
-            ],
-        },
+        contents: { parts },
         config: {
             responseModalities: [Modality.IMAGE, Modality.TEXT],
         },
@@ -129,15 +145,16 @@ async function main() {
     const analyzeButton2 = document.getElementById('analyze-button-2') as HTMLButtonElement;
     const imagePreview2 = document.getElementById('image-preview-2') as HTMLImageElement;
     const promptInput2 = document.getElementById('prompt-input-2') as HTMLTextAreaElement;
+    const characterEditor2 = document.getElementById('character-editor-2') as HTMLElement;
     
-    const descriptionSection = document.getElementById('description-section');
+    const descriptionSection = document.getElementById('description-section') as HTMLElement;
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const imageGallery = document.getElementById('image-gallery');
+    const loadingIndicator = document.getElementById('loading-indicator') as HTMLElement;
+    const imageGallery = document.getElementById('image-gallery') as HTMLElement;
     const customPosesInput = document.getElementById('custom-poses-input') as HTMLTextAreaElement;
 
     if (!imageUpload1 || !analyzeButton1 || !imagePreview1 || !promptInput1 ||
-        !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 ||
+        !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 || !characterEditor2 ||
         !descriptionSection || !generateButton || !loadingIndicator || !imageGallery || !customPosesInput) {
         console.error('Required HTML elements not found.');
         return;
@@ -149,8 +166,15 @@ async function main() {
     let uploadedFileParts2: { base64: string, mimeType: string } | null = null;
 
     function checkAndShowDescriptionSection() {
-        if (uploadedFileParts1 && uploadedFileParts2) {
+        if (uploadedFileParts1) {
             descriptionSection.classList.remove('hidden');
+            if (uploadedFileParts2) {
+                characterEditor2.classList.remove('hidden');
+            } else {
+                characterEditor2.classList.add('hidden');
+            }
+        } else {
+            descriptionSection.classList.add('hidden');
         }
     }
 
@@ -165,10 +189,12 @@ async function main() {
             reader.readAsDataURL(uploadedFile1);
             uploadedFileParts1 = null;
             promptInput1.value = '';
-            descriptionSection.classList.add('hidden');
+            checkAndShowDescriptionSection();
         } else {
             uploadedFile1 = null;
+            uploadedFileParts1 = null;
             analyzeButton1.disabled = true;
+            checkAndShowDescriptionSection();
         }
     });
 
@@ -183,10 +209,12 @@ async function main() {
             reader.readAsDataURL(uploadedFile2);
             uploadedFileParts2 = null;
             promptInput2.value = '';
-            descriptionSection.classList.add('hidden');
+            checkAndShowDescriptionSection();
         } else {
             uploadedFile2 = null;
+            uploadedFileParts2 = null;
             analyzeButton2.disabled = true;
+            checkAndShowDescriptionSection();
         }
     });
 
@@ -241,13 +269,18 @@ async function main() {
         const basePrompt1 = promptInput1.value.trim();
         const basePrompt2 = promptInput2.value.trim();
 
-        if (!basePrompt1 || !basePrompt2) {
-            alert('Both character descriptions cannot be empty.');
+        if (!basePrompt1) {
+            alert('Character 1 description cannot be empty.');
             return;
         }
 
-        if (!uploadedFileParts1 || !uploadedFileParts2) {
-            alert('Analysis data is missing for one or both characters. Please upload and analyze both images.');
+        if (uploadedFileParts2 && !basePrompt2) {
+             alert('Character 2 has an image uploaded but no description. Please analyze the character or clear the image.');
+             return;
+        }
+
+        if (!uploadedFileParts1) {
+            alert('Analysis data is missing for Character 1. Please upload and analyze the image.');
             return;
         }
         
@@ -260,7 +293,14 @@ async function main() {
 
             for (const pose of posesToGenerate) {
                 const expression = expressions[Math.floor(Math.random() * expressions.length)];
-                const fullPrompt = `Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Using the first provided image as a strict reference for Character 1's face, appearance, and art style, and the second image for Character 2, redraw them both together in the following scene: ${pose}. Both characters should have ${expression} on their faces. Do not alter their identities.`;
+                let fullPrompt: string;
+                if (basePrompt2 && uploadedFileParts2) {
+                    // Two characters prompt
+                    fullPrompt = `Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Using the first provided image as a strict reference for Character 1's face, appearance, and art style, and the second image for Character 2, redraw them both together in the following scene: ${pose}. Both characters should have ${expression} on their faces. Do not alter their identities.`;
+                } else {
+                    // Single character prompt
+                    fullPrompt = `A character is described as: "${basePrompt1}". Using the provided image as a strict reference for the character's face, appearance, and art style, redraw them in the following scene: ${pose}. The character should have ${expression} on their face. Do not alter their identity.`;
+                }
                 await generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, imageGallery);
             }
 
@@ -285,8 +325,8 @@ async function main() {
                 .map(p => p.trim())
                 .filter(p => p.length > 0);
         } else {
-            // Use default poses if the input is empty
-            posesToGenerate = poses;
+            // Use default poses based on number of characters
+            posesToGenerate = uploadedFileParts2 ? twoCharacterPoses : singleCharacterPoses;
         }
 
         const maxPoses = 10;
