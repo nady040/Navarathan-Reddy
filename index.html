@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Character Pose Generator</title>
+    <title>Character & Prop Pose Generator</title>
     <link rel="stylesheet" href="index.css">
     <script type="importmap">
       {
@@ -14,7 +14,7 @@
     </script>
 </head>
 <body>
-    <h1>Character Pose Generator</h1>
+    <h1>Character & Prop Pose Generator</h1>
     <div id="controls">
         <div class="character-control">
             <label for="image-upload-1" class="upload-label">1. Upload Character 1</label>
@@ -26,21 +26,31 @@
             <input type="file" id="image-upload-2" accept="image/*">
             <button id="analyze-button-2" disabled>Analyze Character 2</button>
         </div>
+        <div class="character-control">
+            <label for="image-upload-prop" class="upload-label">1. Upload Prop (Optional)</label>
+            <input type="file" id="image-upload-prop" accept="image/*">
+            <button id="analyze-button-prop" disabled>Analyze Prop</button>
+        </div>
     </div>
 
     <div id="description-section" class="hidden">
-        <h2>2. Refine Character Descriptions</h2>
-        <p>Edit the descriptions below to improve character consistency, especially the face.</p>
+        <h2>2. Refine Descriptions</h2>
+        <p>Edit the descriptions below to improve consistency.</p>
         <div id="description-editor">
             <div class="character-editor">
                 <h3>Character 1</h3>
                 <img id="image-preview-1" src="#" alt="Your uploaded character 1" />
                 <textarea id="prompt-input-1" rows="15" placeholder="AI-generated description for character 1..."></textarea>
             </div>
-            <div class="character-editor" id="character-editor-2">
+            <div class="character-editor hidden" id="character-editor-2">
                 <h3>Character 2</h3>
                 <img id="image-preview-2" src="#" alt="Your uploaded character 2" />
                 <textarea id="prompt-input-2" rows="15" placeholder="AI-generated description for character 2..."></textarea>
+            </div>
+             <div class="character-editor hidden" id="character-editor-prop">
+                <h3>Prop</h3>
+                <img id="image-preview-prop" src="#" alt="Your uploaded prop" />
+                <textarea id="prompt-input-prop" rows="15" placeholder="AI-generated description for the prop..."></textarea>
             </div>
         </div>
 

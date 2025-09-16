@@ -70,12 +70,12 @@ function fileToGenerativePart(file: File): Promise<{ base64: string, mimeType: s
 }
 
 /**
- * Generates a descriptive prompt from an image.
+ * Generates a descriptive prompt for a character image.
  * @param {string} base64Image The base64 encoded image.
  * @param {string} mimeType The mime type of the image.
  * @returns {Promise<string>} A descriptive prompt.
  */
-async function generateDescriptionFromImage(base64Image: string, mimeType: string): Promise<string> {
+async function generateDescriptionFromCharacterImage(base64Image: string, mimeType: string): Promise<string> {
     const response = await ai.models.generateContent({
         model: visionModel,
         contents: {
@@ -95,21 +95,51 @@ async function generateDescriptionFromImage(base64Image: string, mimeType: strin
     return response.text.trim();
 }
 
+/**
+ * Generates a descriptive prompt for a prop image.
+ * @param {string} base64Image The base64 encoded image.
+ * @param {string} mimeType The mime type of the image.
+ * @returns {Promise<string>} A descriptive prompt.
+ */
+async function generateDescriptionFromPropImage(base64Image: string, mimeType: string): Promise<string> {
+    const response = await ai.models.generateContent({
+        model: visionModel,
+        contents: {
+            parts: [
+                {
+                    text: 'Act as an expert concept artist. Your goal is to create a "prop sheet" prompt for an image generation model. Describe the object in extreme detail. Focus on its material (e.g., "worn leather," "polished chrome"), texture, shape, color palette, size, specific markings or engravings, and overall art style. The output must be a single, dense paragraph, ready to be used as a base prompt.'
+                },
+                {
+                    inlineData: {
+                        data: base64Image,
+                        mimeType: mimeType,
+                    },
+                },
+            ],
+        },
+    });
+    return response.text.trim();
+}
+
 
 /**
- * Generates a single image based on one or two reference images and a prompt.
+ * Generates a single image based on references and a prompt.
  * @param {string} prompt The full prompt for image generation.
  * @param {object} imageParts1 The generative parts for character 1.
  * @param {object | null} imageParts2 The generative parts for character 2.
+ * @param {object | null} imagePartsProp The generative parts for the prop.
  * @param {HTMLElement} imageGallery The gallery element to append the image to.
  */
-async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imageGallery: HTMLElement) {
+async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imagePartsProp: { base64: string, mimeType: string } | null, imageGallery: HTMLElement) {
     const parts: ({ inlineData: { data: string; mimeType: string; }; } | { text: string; })[] = [
         { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
     ];
 
     if (imageParts2) {
         parts.push({ inlineData: { data: imageParts2.base64, mimeType: imageParts2.mimeType } });
+    }
+    if (imagePartsProp) {
+        parts.push({ inlineData: { data: imagePartsProp.base64, mimeType: imagePartsProp.mimeType } });
     }
     parts.push({ text: prompt });
     
@@ -136,17 +166,27 @@ async function generateAndDisplayImage(prompt: string, imageParts1: { base64: st
 }
 
 async function main() {
+    // Character 1 controls
     const imageUpload1 = document.getElementById('image-upload-1') as HTMLInputElement;
     const analyzeButton1 = document.getElementById('analyze-button-1') as HTMLButtonElement;
     const imagePreview1 = document.getElementById('image-preview-1') as HTMLImageElement;
     const promptInput1 = document.getElementById('prompt-input-1') as HTMLTextAreaElement;
 
+    // Character 2 controls
     const imageUpload2 = document.getElementById('image-upload-2') as HTMLInputElement;
     const analyzeButton2 = document.getElementById('analyze-button-2') as HTMLButtonElement;
     const imagePreview2 = document.getElementById('image-preview-2') as HTMLImageElement;
     const promptInput2 = document.getElementById('prompt-input-2') as HTMLTextAreaElement;
     const characterEditor2 = document.getElementById('character-editor-2') as HTMLElement;
+
+    // Prop controls
+    const imageUploadProp = document.getElementById('image-upload-prop') as HTMLInputElement;
+    const analyzeButtonProp = document.getElementById('analyze-button-prop') as HTMLButtonElement;
+    const imagePreviewProp = document.getElementById('image-preview-prop') as HTMLImageElement;
+    const promptInputProp = document.getElementById('prompt-input-prop') as HTMLTextAreaElement;
+    const characterEditorProp = document.getElementById('character-editor-prop') as HTMLElement;
     
+    // Global controls
     const descriptionSection = document.getElementById('description-section') as HTMLElement;
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
     const loadingIndicator = document.getElementById('loading-indicator') as HTMLElement;
@@ -155,6 +195,7 @@ async function main() {
 
     if (!imageUpload1 || !analyzeButton1 || !imagePreview1 || !promptInput1 ||
         !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 || !characterEditor2 ||
+        !imageUploadProp || !analyzeButtonProp || !imagePreviewProp || !promptInputProp || !characterEditorProp ||
         !descriptionSection || !generateButton || !loadingIndicator || !imageGallery || !customPosesInput) {
         console.error('Required HTML elements not found.');
         return;
@@ -164,17 +205,26 @@ async function main() {
     let uploadedFileParts1: { base64: string, mimeType: string } | null = null;
     let uploadedFile2: File | null = null;
     let uploadedFileParts2: { base64: string, mimeType: string } | null = null;
+    let uploadedFileProp: File | null = null;
+    let uploadedFilePartsProp: { base64: string, mimeType: string } | null = null;
 
-    function checkAndShowDescriptionSection() {
+    function checkAndShowSections() {
         if (uploadedFileParts1) {
             descriptionSection.classList.remove('hidden');
-            if (uploadedFileParts2) {
-                characterEditor2.classList.remove('hidden');
-            } else {
-                characterEditor2.classList.add('hidden');
-            }
         } else {
             descriptionSection.classList.add('hidden');
+        }
+
+        if(uploadedFileParts2) {
+            characterEditor2.classList.remove('hidden');
+        } else {
+            characterEditor2.classList.add('hidden');
+        }
+
+        if(uploadedFilePartsProp) {
+            characterEditorProp.classList.remove('hidden');
+        } else {
+            characterEditorProp.classList.add('hidden');
         }
     }
 
@@ -189,12 +239,12 @@ async function main() {
             reader.readAsDataURL(uploadedFile1);
             uploadedFileParts1 = null;
             promptInput1.value = '';
-            checkAndShowDescriptionSection();
+            checkAndShowSections();
         } else {
             uploadedFile1 = null;
             uploadedFileParts1 = null;
             analyzeButton1.disabled = true;
-            checkAndShowDescriptionSection();
+            checkAndShowSections();
         }
     });
 
@@ -209,19 +259,41 @@ async function main() {
             reader.readAsDataURL(uploadedFile2);
             uploadedFileParts2 = null;
             promptInput2.value = '';
-            checkAndShowDescriptionSection();
+            checkAndShowSections();
         } else {
             uploadedFile2 = null;
             uploadedFileParts2 = null;
             analyzeButton2.disabled = true;
-            checkAndShowDescriptionSection();
+            checkAndShowSections();
+        }
+    });
+
+    imageUploadProp.addEventListener('change', () => {
+        if (imageUploadProp.files && imageUploadProp.files.length > 0) {
+            uploadedFileProp = imageUploadProp.files[0];
+            analyzeButtonProp.disabled = false;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreviewProp.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(uploadedFileProp);
+            uploadedFilePartsProp = null;
+            promptInputProp.value = '';
+            checkAndShowSections();
+        } else {
+            uploadedFileProp = null;
+            uploadedFilePartsProp = null;
+            analyzeButtonProp.disabled = true;
+            checkAndShowSections();
         }
     });
 
     async function handleAnalysis(
         file: File | null,
         button: HTMLButtonElement,
-        promptInput: HTMLTextAreaElement
+        promptInput: HTMLTextAreaElement,
+        descriptionGenerator: (base64: string, mimeType: string) => Promise<string>,
+        entityName: string
     ): Promise<{ base64: string, mimeType: string } | null> {
         if (!file) {
             alert('Please upload an image first.');
@@ -231,19 +303,19 @@ async function main() {
         try {
             button.disabled = true;
             loadingIndicator.style.color = '#f0f0f0';
-            loadingIndicator.textContent = 'Analyzing character...';
+            loadingIndicator.textContent = `Analyzing ${entityName}...`;
             loadingIndicator.style.display = 'block';
 
             const fileParts = await fileToGenerativePart(file);
-            const description = await generateDescriptionFromImage(fileParts.base64, fileParts.mimeType);
+            const description = await descriptionGenerator(fileParts.base64, fileParts.mimeType);
             
             promptInput.value = description;
             loadingIndicator.style.display = 'none';
             return fileParts;
 
         } catch (error) {
-            console.error("Error during analysis:", error);
-            loadingIndicator.textContent = `Error: Could not analyze ${button.id.includes('1') ? 'Character 1' : 'Character 2'}. Check the console.`;
+            console.error(`Error during ${entityName} analysis:`, error);
+            loadingIndicator.textContent = `Error: Could not analyze ${entityName}. Check the console.`;
             loadingIndicator.style.color = 'red';
             return null;
         } finally {
@@ -252,13 +324,18 @@ async function main() {
     }
 
     analyzeButton1.addEventListener('click', async () => {
-        uploadedFileParts1 = await handleAnalysis(uploadedFile1, analyzeButton1, promptInput1);
-        checkAndShowDescriptionSection();
+        uploadedFileParts1 = await handleAnalysis(uploadedFile1, analyzeButton1, promptInput1, generateDescriptionFromCharacterImage, 'Character 1');
+        checkAndShowSections();
     });
 
     analyzeButton2.addEventListener('click', async () => {
-        uploadedFileParts2 = await handleAnalysis(uploadedFile2, analyzeButton2, promptInput2);
-        checkAndShowDescriptionSection();
+        uploadedFileParts2 = await handleAnalysis(uploadedFile2, analyzeButton2, promptInput2, generateDescriptionFromCharacterImage, 'Character 2');
+        checkAndShowSections();
+    });
+
+    analyzeButtonProp.addEventListener('click', async () => {
+        uploadedFilePartsProp = await handleAnalysis(uploadedFileProp, analyzeButtonProp, promptInputProp, generateDescriptionFromPropImage, 'Prop');
+        checkAndShowSections();
     });
 
     /**
@@ -268,9 +345,10 @@ async function main() {
     async function startGeneration(posesToGenerate: string[]) {
         const basePrompt1 = promptInput1.value.trim();
         const basePrompt2 = promptInput2.value.trim();
+        const basePromptProp = promptInputProp.value.trim();
 
-        if (!basePrompt1) {
-            alert('Character 1 description cannot be empty.');
+        if (!basePrompt1 || !uploadedFileParts1) {
+            alert('Character 1 description and analysis data are required. Please upload and analyze the image.');
             return;
         }
 
@@ -278,10 +356,10 @@ async function main() {
              alert('Character 2 has an image uploaded but no description. Please analyze the character or clear the image.');
              return;
         }
-
-        if (!uploadedFileParts1) {
-            alert('Analysis data is missing for Character 1. Please upload and analyze the image.');
-            return;
+        
+        if (uploadedFilePartsProp && !basePromptProp) {
+             alert('The prop has an image uploaded but no description. Please analyze the prop or clear the image.');
+             return;
         }
         
         try {
@@ -294,14 +372,20 @@ async function main() {
             for (const pose of posesToGenerate) {
                 const expression = expressions[Math.floor(Math.random() * expressions.length)];
                 let fullPrompt: string;
+                let propInstruction = '';
+
+                if (basePromptProp && uploadedFilePartsProp) {
+                    propInstruction = ` The scene must also include a prop described as "${basePromptProp}", using the provided prop image as a strict reference for its appearance.`;
+                }
+
                 if (basePrompt2 && uploadedFileParts2) {
                     // Two characters prompt
-                    fullPrompt = `Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Using the first provided image as a strict reference for Character 1's face, appearance, and art style, and the second image for Character 2, redraw them both together in the following scene: ${pose}. Both characters should have ${expression} on their faces. Do not alter their identities.`;
+                    fullPrompt = `Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Using the first provided image as a strict reference for Character 1's face, appearance, and art style, and the second image for Character 2, redraw them both together in the following scene: ${pose}.${propInstruction} Both characters should have ${expression} on their faces. Do not alter their identities.`;
                 } else {
                     // Single character prompt
-                    fullPrompt = `A character is described as: "${basePrompt1}". Using the provided image as a strict reference for the character's face, appearance, and art style, redraw them in the following scene: ${pose}. The character should have ${expression} on their face. Do not alter their identity.`;
+                    fullPrompt = `A character is described as: "${basePrompt1}". Using the provided image as a strict reference for the character's face, appearance, and art style, redraw them in the following scene: ${pose}.${propInstruction} The character should have ${expression} on their face. Do not alter their identity.`;
                 }
-                await generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, imageGallery);
+                await generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, imageGallery);
             }
 
             loadingIndicator.style.display = 'none';
