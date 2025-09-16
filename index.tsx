@@ -11,33 +11,18 @@ const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 const imageEditModel = 'gemini-2.5-flash-image-preview';
 const visionModel = 'gemini-2.5-flash';
 
-// Array of different poses to generate
+// Array of different poses for two characters
 const poses = [
-  // Combat / Action
-  'in a dynamic high-kick pose',
-  'launching a powerful uppercut',
-  'wielding a long wooden bo staff in a defensive stance',
-  'drawing a sword from its sheath',
-  'aiming a bow and arrow',
-  'casting a magic spell with glowing hands',
-  
-  // Stances
-  'in a graceful crane stance, balancing on one leg',
-  'in a low, powerful horse stance with fists ready',
-  'in a classic praying mantis style pose',
-  'executing a fluid snake style movement, low to the ground',
-
-  // Dramatic / Emotive
-  'standing on a cliff edge, cape billowing in the wind',
-  'looking over their shoulder with a mysterious expression',
-  'raising a triumphant fist to the sky',
-  'kneeling in defeat, head bowed',
-  
-  // Relaxing / Casual
-  'leaning against a wall, arms crossed casually',
-  'sitting by a campfire, looking thoughtful',
-  'reading a book in a comfortable chair',
-  'walking through a bustling city street'
+  'shaking hands',
+  'standing back-to-back, ready for a fight',
+  'clashing swords in a dramatic duel',
+  'character 1 teaching character 2 a fighting stance',
+  'character 1 comforting a sad character 2',
+  'laughing together at a shared joke',
+  'exploring a mysterious cave, one holding a torch',
+  'working together to build a campfire',
+  'in a tense standoff, staring each other down',
+  'celebrating a victory with a high-five',
 ];
 
 // Array of different expressions
@@ -99,23 +84,19 @@ async function generateDescriptionFromImage(base64Image: string, mimeType: strin
 
 
 /**
- * Generates a single image based on a reference image and a prompt, then appends it to the gallery.
+ * Generates a single image based on two reference images and a prompt.
  * @param {string} prompt The full prompt for image generation.
- * @param {string} base64Image The base64 encoded reference image.
- * @param {string} mimeType The mime type of the reference image.
+ * @param {object} imageParts1 The generative parts for character 1.
+ * @param {object} imageParts2 The generative parts for character 2.
  * @param {HTMLElement} imageGallery The gallery element to append the image to.
  */
-async function generateAndDisplayImage(prompt: string, base64Image: string, mimeType: string, imageGallery: HTMLElement) {
+async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string }, imageGallery: HTMLElement) {
     const response = await ai.models.generateContent({
         model: imageEditModel,
         contents: {
             parts: [
-                {
-                    inlineData: {
-                        data: base64Image,
-                        mimeType: mimeType,
-                    },
-                },
+                { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
+                { inlineData: { data: imageParts2.base64, mimeType: imageParts2.mimeType } },
                 { text: prompt },
             ],
         },
@@ -139,72 +120,117 @@ async function generateAndDisplayImage(prompt: string, base64Image: string, mime
 }
 
 async function main() {
-    // Main page elements
-    const imageUpload = document.getElementById('image-upload') as HTMLInputElement;
-    const analyzeButton = document.getElementById('analyze-button') as HTMLButtonElement;
+    const imageUpload1 = document.getElementById('image-upload-1') as HTMLInputElement;
+    const analyzeButton1 = document.getElementById('analyze-button-1') as HTMLButtonElement;
+    const imagePreview1 = document.getElementById('image-preview-1') as HTMLImageElement;
+    const promptInput1 = document.getElementById('prompt-input-1') as HTMLTextAreaElement;
+
+    const imageUpload2 = document.getElementById('image-upload-2') as HTMLInputElement;
+    const analyzeButton2 = document.getElementById('analyze-button-2') as HTMLButtonElement;
+    const imagePreview2 = document.getElementById('image-preview-2') as HTMLImageElement;
+    const promptInput2 = document.getElementById('prompt-input-2') as HTMLTextAreaElement;
+    
     const descriptionSection = document.getElementById('description-section');
-    const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
-    const promptInput = document.getElementById('prompt-input') as HTMLTextAreaElement;
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
     const loadingIndicator = document.getElementById('loading-indicator');
     const imageGallery = document.getElementById('image-gallery');
     const customPosesInput = document.getElementById('custom-poses-input') as HTMLTextAreaElement;
 
-
-    if (!imageUpload || !analyzeButton || !descriptionSection || !imagePreview || !promptInput || !generateButton || !loadingIndicator || !imageGallery || !customPosesInput) {
+    if (!imageUpload1 || !analyzeButton1 || !imagePreview1 || !promptInput1 ||
+        !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 ||
+        !descriptionSection || !generateButton || !loadingIndicator || !imageGallery || !customPosesInput) {
         console.error('Required HTML elements not found.');
         return;
     }
 
-    let uploadedFile: File | null = null;
-    let uploadedFileParts: { base64: string, mimeType: string } | null = null;
+    let uploadedFile1: File | null = null;
+    let uploadedFileParts1: { base64: string, mimeType: string } | null = null;
+    let uploadedFile2: File | null = null;
+    let uploadedFileParts2: { base64: string, mimeType: string } | null = null;
 
-    imageUpload.addEventListener('change', () => {
-        if (imageUpload.files && imageUpload.files.length > 0) {
-            uploadedFile = imageUpload.files[0];
-            analyzeButton.disabled = false;
+    function checkAndShowDescriptionSection() {
+        if (uploadedFileParts1 && uploadedFileParts2) {
+            descriptionSection.classList.remove('hidden');
+        }
+    }
+
+    imageUpload1.addEventListener('change', () => {
+        if (imageUpload1.files && imageUpload1.files.length > 0) {
+            uploadedFile1 = imageUpload1.files[0];
+            analyzeButton1.disabled = false;
             const reader = new FileReader();
             reader.onload = (e) => {
-                imagePreview.src = e.target?.result as string;
+                imagePreview1.src = e.target?.result as string;
             };
-            reader.readAsDataURL(uploadedFile);
-            // Reset state
-            uploadedFileParts = null;
+            reader.readAsDataURL(uploadedFile1);
+            uploadedFileParts1 = null;
+            promptInput1.value = '';
             descriptionSection.classList.add('hidden');
-            promptInput.value = '';
-
         } else {
-            uploadedFile = null;
-            analyzeButton.disabled = true;
+            uploadedFile1 = null;
+            analyzeButton1.disabled = true;
         }
     });
 
-    analyzeButton.addEventListener('click', async () => {
-        if (!uploadedFile) {
+    imageUpload2.addEventListener('change', () => {
+        if (imageUpload2.files && imageUpload2.files.length > 0) {
+            uploadedFile2 = imageUpload2.files[0];
+            analyzeButton2.disabled = false;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview2.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(uploadedFile2);
+            uploadedFileParts2 = null;
+            promptInput2.value = '';
+            descriptionSection.classList.add('hidden');
+        } else {
+            uploadedFile2 = null;
+            analyzeButton2.disabled = true;
+        }
+    });
+
+    async function handleAnalysis(
+        file: File | null,
+        button: HTMLButtonElement,
+        promptInput: HTMLTextAreaElement
+    ): Promise<{ base64: string, mimeType: string } | null> {
+        if (!file) {
             alert('Please upload an image first.');
-            return;
+            return null;
         }
 
         try {
-            analyzeButton.disabled = true;
+            button.disabled = true;
             loadingIndicator.style.color = '#f0f0f0';
             loadingIndicator.textContent = 'Analyzing character...';
             loadingIndicator.style.display = 'block';
 
-            uploadedFileParts = await fileToGenerativePart(uploadedFile);
-            const description = await generateDescriptionFromImage(uploadedFileParts.base64, uploadedFileParts.mimeType);
+            const fileParts = await fileToGenerativePart(file);
+            const description = await generateDescriptionFromImage(fileParts.base64, fileParts.mimeType);
             
             promptInput.value = description;
-            descriptionSection.classList.remove('hidden');
             loadingIndicator.style.display = 'none';
+            return fileParts;
 
         } catch (error) {
             console.error("Error during analysis:", error);
-            loadingIndicator.textContent = 'Error: Could not analyze image. Check the console.';
+            loadingIndicator.textContent = `Error: Could not analyze ${button.id.includes('1') ? 'Character 1' : 'Character 2'}. Check the console.`;
             loadingIndicator.style.color = 'red';
+            return null;
         } finally {
-             analyzeButton.disabled = false;
+             button.disabled = false;
         }
+    }
+
+    analyzeButton1.addEventListener('click', async () => {
+        uploadedFileParts1 = await handleAnalysis(uploadedFile1, analyzeButton1, promptInput1);
+        checkAndShowDescriptionSection();
+    });
+
+    analyzeButton2.addEventListener('click', async () => {
+        uploadedFileParts2 = await handleAnalysis(uploadedFile2, analyzeButton2, promptInput2);
+        checkAndShowDescriptionSection();
     });
 
     /**
@@ -212,14 +238,16 @@ async function main() {
      * @param posesToGenerate An array of pose description strings.
      */
     async function startGeneration(posesToGenerate: string[]) {
-        const basePrompt = promptInput.value.trim();
-        if (!basePrompt) {
-            alert('The description cannot be empty.');
+        const basePrompt1 = promptInput1.value.trim();
+        const basePrompt2 = promptInput2.value.trim();
+
+        if (!basePrompt1 || !basePrompt2) {
+            alert('Both character descriptions cannot be empty.');
             return;
         }
 
-        if (!uploadedFileParts) {
-            alert('Analysis data is missing. Please re-upload and analyze the image.');
+        if (!uploadedFileParts1 || !uploadedFileParts2) {
+            alert('Analysis data is missing for one or both characters. Please upload and analyze both images.');
             return;
         }
         
@@ -232,8 +260,8 @@ async function main() {
 
             for (const pose of posesToGenerate) {
                 const expression = expressions[Math.floor(Math.random() * expressions.length)];
-                const fullPrompt = `${basePrompt} Using the provided image as a strict reference for the character's face, appearance, and art style, redraw the character ${pose}. The character should have ${expression} on their face. Do not alter the character's identity.`;
-                await generateAndDisplayImage(fullPrompt, uploadedFileParts.base64, uploadedFileParts.mimeType, imageGallery);
+                const fullPrompt = `Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Using the first provided image as a strict reference for Character 1's face, appearance, and art style, and the second image for Character 2, redraw them both together in the following scene: ${pose}. Both characters should have ${expression} on their faces. Do not alter their identities.`;
+                await generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, imageGallery);
             }
 
             loadingIndicator.style.display = 'none';

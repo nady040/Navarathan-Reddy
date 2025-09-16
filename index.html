@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Pose Generator</title>
+    <title>Dynamic Duo Pose Generator</title>
     <link rel="stylesheet" href="index.css">
     <script type="importmap">
       {
@@ -14,25 +14,40 @@
     </script>
 </head>
 <body>
-    <h1>Dynamic Pose Generator</h1>
+    <h1>Dynamic Duo Pose Generator</h1>
     <div id="controls">
-        <label for="image-upload" class="upload-label">1. Upload Your Character Image</label>
-        <input type="file" id="image-upload" accept="image/*">
-        <button id="analyze-button" disabled>Analyze Character</button>
+        <div class="character-control">
+            <label for="image-upload-1" class="upload-label">1. Upload Character 1</label>
+            <input type="file" id="image-upload-1" accept="image/*">
+            <button id="analyze-button-1" disabled>Analyze Character 1</button>
+        </div>
+        <div class="character-control">
+            <label for="image-upload-2" class="upload-label">1. Upload Character 2</label>
+            <input type="file" id="image-upload-2" accept="image/*">
+            <button id="analyze-button-2" disabled>Analyze Character 2</button>
+        </div>
     </div>
 
     <div id="description-section" class="hidden">
-        <h2>2. Refine Character Description</h2>
-        <p>Edit the description below to improve character consistency, especially the face.</p>
+        <h2>2. Refine Character Descriptions</h2>
+        <p>Edit the descriptions below to improve character consistency, especially the face.</p>
         <div id="description-editor">
-            <img id="image-preview" src="#" alt="Your uploaded character" />
-            <textarea id="prompt-input" rows="15" placeholder="AI-generated description will appear here..."></textarea>
+            <div class="character-editor">
+                <h3>Character 1</h3>
+                <img id="image-preview-1" src="#" alt="Your uploaded character 1" />
+                <textarea id="prompt-input-1" rows="15" placeholder="AI-generated description for character 1..."></textarea>
+            </div>
+            <div class="character-editor">
+                <h3>Character 2</h3>
+                <img id="image-preview-2" src="#" alt="Your uploaded character 2" />
+                <textarea id="prompt-input-2" rows="15" placeholder="AI-generated description for character 2..."></textarea>
+            </div>
         </div>
 
         <div id="pose-customization-inline">
-            <h2>3. Customize Poses (Optional)</h2>
-            <p>Enter one pose per line (up to 10). If left empty, a default set of 10 poses will be used.</p>
-            <textarea id="custom-poses-input" rows="8" placeholder="e.g., reading a book by a fireplace&#10;casting a powerful spell&#10;running through a forest"></textarea>
+            <h2>3. Describe The Scene (Optional)</h2>
+            <p>Enter one scene or interaction per line (up to 10). If left empty, a default set will be used.</p>
+            <textarea id="custom-poses-input" rows="8" placeholder="e.g., character 1 teaching character 2 to fight&#10;shaking hands&#10;standing back-to-back"></textarea>
         </div>
         
         <button id="generate-button">Generate Poses</button>
