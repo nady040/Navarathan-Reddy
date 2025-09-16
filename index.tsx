@@ -123,45 +123,78 @@ async function generateDescriptionFromPropImage(base64Image: string, mimeType: s
 
 
 /**
- * Generates a single image based on references and a prompt.
+ * Generates a single image and replaces a placeholder element with the result.
  * @param {string} prompt The full prompt for image generation.
  * @param {object} imageParts1 The generative parts for character 1.
  * @param {object | null} imageParts2 The generative parts for character 2.
  * @param {object | null} imagePartsProp The generative parts for the prop.
- * @param {HTMLElement} imageGallery The gallery element to append the image to.
+ * @param {HTMLElement} placeholderElement The placeholder element to replace.
  */
-async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imagePartsProp: { base64: string, mimeType: string } | null, imageGallery: HTMLElement) {
-    const parts: ({ inlineData: { data: string; mimeType: string; }; } | { text: string; })[] = [
-        { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
-    ];
+async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imagePartsProp: { base64: string, mimeType: string } | null, placeholderElement: HTMLElement) {
+    try {
+        const parts: ({ inlineData: { data: string; mimeType: string; }; } | { text: string; })[] = [
+            { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
+        ];
 
-    if (imageParts2) {
-        parts.push({ inlineData: { data: imageParts2.base64, mimeType: imageParts2.mimeType } });
-    }
-    if (imagePartsProp) {
-        parts.push({ inlineData: { data: imagePartsProp.base64, mimeType: imagePartsProp.mimeType } });
-    }
-    parts.push({ text: prompt });
-    
-    const response = await ai.models.generateContent({
-        model: imageEditModel,
-        contents: { parts },
-        config: {
-            responseModalities: [Modality.IMAGE, Modality.TEXT],
-        },
-    });
+        if (imageParts2) {
+            parts.push({ inlineData: { data: imageParts2.base64, mimeType: imageParts2.mimeType } });
+        }
+        if (imagePartsProp) {
+            parts.push({ inlineData: { data: imagePartsProp.base64, mimeType: imagePartsProp.mimeType } });
+        }
+        parts.push({ text: prompt });
+        
+        const response = await ai.models.generateContent({
+            model: imageEditModel,
+            contents: { parts },
+            config: {
+                responseModalities: [Modality.IMAGE, Modality.TEXT],
+            },
+        });
 
-    if (response?.candidates?.[0]?.content?.parts) {
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-                const src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-                const img = new Image();
-                img.src = src;
-                img.alt = prompt;
-                imageGallery.appendChild(img);
-                break; // Assume one image is generated per call
+        if (response?.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    const src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                    
+                    const galleryCard = document.createElement('div');
+                    galleryCard.className = 'gallery-card';
+
+                    const img = new Image();
+                    img.src = src;
+                    img.alt = prompt;
+
+                    const overlay = document.createElement('div');
+                    overlay.className = 'gallery-overlay';
+
+                    const downloadButton = document.createElement('button');
+                    downloadButton.className = 'download-button';
+                    downloadButton.textContent = 'Download';
+                    downloadButton.onclick = () => {
+                        const a = document.createElement('a');
+                        a.href = src;
+                        a.download = `pose-${Date.now()}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    };
+
+                    overlay.appendChild(downloadButton);
+                    galleryCard.appendChild(img);
+                    galleryCard.appendChild(overlay);
+
+                    placeholderElement.replaceWith(galleryCard);
+                    return; // Exit after finding the first image
+                }
             }
         }
+        // If no image part was found in a successful response
+        throw new Error('No image data found in response.');
+
+    } catch (error) {
+        console.error('Image generation failed for prompt:', prompt, error);
+        placeholderElement.innerHTML = '&#x26A0;<br/>Failed'; // Warning sign icon
+        placeholderElement.classList.add('generation-error');
     }
 }
 
@@ -189,14 +222,13 @@ async function main() {
     // Global controls
     const descriptionSection = document.getElementById('description-section') as HTMLElement;
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
-    const loadingIndicator = document.getElementById('loading-indicator') as HTMLElement;
     const imageGallery = document.getElementById('image-gallery') as HTMLElement;
     const customPosesInput = document.getElementById('custom-poses-input') as HTMLTextAreaElement;
 
     if (!imageUpload1 || !analyzeButton1 || !imagePreview1 || !promptInput1 ||
         !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 || !characterEditor2 ||
         !imageUploadProp || !analyzeButtonProp || !imagePreviewProp || !promptInputProp || !characterEditorProp ||
-        !descriptionSection || !generateButton || !loadingIndicator || !imageGallery || !customPosesInput) {
+        !descriptionSection || !generateButton || !imageGallery || !customPosesInput) {
         console.error('Required HTML elements not found.');
         return;
     }
@@ -292,49 +324,46 @@ async function main() {
         file: File | null,
         button: HTMLButtonElement,
         promptInput: HTMLTextAreaElement,
-        descriptionGenerator: (base64: string, mimeType: string) => Promise<string>,
-        entityName: string
+        descriptionGenerator: (base64: string, mimeType: string) => Promise<string>
     ): Promise<{ base64: string, mimeType: string } | null> {
         if (!file) {
             alert('Please upload an image first.');
             return null;
         }
 
+        const originalButtonText = button.textContent;
         try {
             button.disabled = true;
-            loadingIndicator.style.color = '#f0f0f0';
-            loadingIndicator.textContent = `Analyzing ${entityName}...`;
-            loadingIndicator.style.display = 'block';
-
+            button.textContent = 'Analyzing...';
+            
             const fileParts = await fileToGenerativePart(file);
             const description = await descriptionGenerator(fileParts.base64, fileParts.mimeType);
             
             promptInput.value = description;
-            loadingIndicator.style.display = 'none';
             return fileParts;
 
         } catch (error) {
-            console.error(`Error during ${entityName} analysis:`, error);
-            loadingIndicator.textContent = `Error: Could not analyze ${entityName}. Check the console.`;
-            loadingIndicator.style.color = 'red';
+            console.error(`Error during analysis:`, error);
+            alert('Could not analyze the image. Check the console for details.');
             return null;
         } finally {
              button.disabled = false;
+             button.textContent = originalButtonText;
         }
     }
 
     analyzeButton1.addEventListener('click', async () => {
-        uploadedFileParts1 = await handleAnalysis(uploadedFile1, analyzeButton1, promptInput1, generateDescriptionFromCharacterImage, 'Character 1');
+        uploadedFileParts1 = await handleAnalysis(uploadedFile1, analyzeButton1, promptInput1, generateDescriptionFromCharacterImage);
         checkAndShowSections();
     });
 
     analyzeButton2.addEventListener('click', async () => {
-        uploadedFileParts2 = await handleAnalysis(uploadedFile2, analyzeButton2, promptInput2, generateDescriptionFromCharacterImage, 'Character 2');
+        uploadedFileParts2 = await handleAnalysis(uploadedFile2, analyzeButton2, promptInput2, generateDescriptionFromCharacterImage);
         checkAndShowSections();
     });
 
     analyzeButtonProp.addEventListener('click', async () => {
-        uploadedFilePartsProp = await handleAnalysis(uploadedFileProp, analyzeButtonProp, promptInputProp, generateDescriptionFromPropImage, 'Prop');
+        uploadedFilePartsProp = await handleAnalysis(uploadedFileProp, analyzeButtonProp, promptInputProp, generateDescriptionFromPropImage);
         checkAndShowSections();
     });
 
@@ -362,14 +391,17 @@ async function main() {
              return;
         }
         
+        const originalButtonText = generateButton.textContent;
         try {
             generateButton.disabled = true;
+            generateButton.textContent = `Generating (${posesToGenerate.length})...`;
             imageGallery.textContent = '';
-            loadingIndicator.style.color = '#f0f0f0';
-            loadingIndicator.textContent = `Generating ${posesToGenerate.length} poses, this may take a moment...`;
-            loadingIndicator.style.display = 'block';
-
-            for (const pose of posesToGenerate) {
+            
+            const generationPromises = posesToGenerate.map(pose => {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'gallery-placeholder';
+                imageGallery.appendChild(placeholder);
+                
                 const expression = expressions[Math.floor(Math.random() * expressions.length)];
                 let fullPrompt: string;
                 let propInstruction = '';
@@ -385,17 +417,18 @@ async function main() {
                     // Single character prompt
                     fullPrompt = `A character is described as: "${basePrompt1}". Using the provided image as a strict reference for the character's face, appearance, and art style, redraw them in the following scene: ${pose}.${propInstruction} The character should have ${expression} on their face. Do not alter their identity.`;
                 }
-                await generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, imageGallery);
-            }
 
-            loadingIndicator.style.display = 'none';
+                return generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, placeholder);
+            });
+            
+            await Promise.all(generationPromises);
 
         } catch (error) {
-            console.error("Error during generation process:", error);
-            loadingIndicator.textContent = 'Error: Could not load images. Check the console for details.';
-            loadingIndicator.style.color = 'red';
+            console.error("Error during generation setup:", error);
+            alert('An unexpected error occurred. Check the console for details.');
         } finally {
             generateButton.disabled = false;
+            generateButton.textContent = originalButtonText;
         }
     }
     
