@@ -130,7 +130,7 @@ input[type="file"]::file-selector-button:hover {
     max-width: 550px;
 }
 
-#image-preview-1, #image-preview-2 {
+#image-preview-1, #image-preview-2, #image-preview-prop {
     width: 100%;
     height: auto;
     object-fit: contain;
@@ -155,7 +155,7 @@ input[type="file"]::file-selector-button:hover {
     box-sizing: border-box; /* To include padding and border in the element's total width and height */
 }
 
-#prompt-input-1, #prompt-input-2,
+#prompt-input-1, #prompt-input-2, #prompt-input-prop,
 #custom-poses-input {
     background-color: #2c2c31;
     color: #f0f0f0;
