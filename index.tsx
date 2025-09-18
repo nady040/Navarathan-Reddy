@@ -13,29 +13,19 @@ const visionModel = 'gemini-2.5-flash';
 
 // Array of different poses for two characters
 const twoCharacterPoses = [
-  'shaking hands',
-  'standing back-to-back, ready for a fight',
-  'clashing swords in a dramatic duel',
-  'character 1 teaching character 2 a fighting stance',
-  'character 1 comforting a sad character 2',
-  'laughing together at a shared joke',
-  'exploring a mysterious cave, one holding a torch',
-  'working together to build a campfire',
-  'in a tense standoff, staring each other down',
-  'celebrating a victory with a high-five',
+  'A dramatic low-angle shot of both characters standing back-to-back, preparing for a fight.',
+  'An over-the-shoulder shot of character 1 teaching character 2 a new skill.',
+  'A profile view of the two characters shaking hands, sealing an agreement.',
+  'A close-up shot focusing on both characters laughing together at a shared joke.',
+  'An action shot of the two characters working together to overcome an obstacle.',
 ];
 
 const singleCharacterPoses = [
-  'waving hello cheerfully',
-  'reading a book in a cozy chair',
-  'looking up at the stars thoughtfully',
-  'practicing a cool fighting stance',
-  'drinking a cup of coffee or tea',
-  'laughing heartily',
-  'running through a field of flowers',
-  'striking a heroic pose on a cliff edge',
-  'looking determined and ready for action',
-  'meditating peacefully',
+  'A dynamic low-angle shot of the character striking a heroic pose.',
+  'A thoughtful profile view of the character looking into the distance.',
+  'A close-up shot capturing a moment of intense emotion on the character\'s face.',
+  'A full-body shot of the character in a fighting stance, ready for action.',
+  'A cozy scene of the character reading a book, seen from a high angle.',
 ];
 
 // Array of different expressions
@@ -397,6 +387,8 @@ async function main() {
             generateButton.textContent = `Generating (${posesToGenerate.length})...`;
             imageGallery.textContent = '';
             
+            const consistentBackground = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
+
             const generationPromises = posesToGenerate.map(pose => {
                 const placeholder = document.createElement('div');
                 placeholder.className = 'gallery-placeholder';
@@ -409,13 +401,15 @@ async function main() {
                 if (basePromptProp && uploadedFilePartsProp) {
                     propInstruction = ` The scene must also include a prop described as "${basePromptProp}", using the provided prop image as a strict reference for its appearance.`;
                 }
+                
+                const sceneInstruction = `Redraw them in the following scene: "${pose}". It is CRITICAL to accurately render the specified camera angle (e.g., 'profile view', 'low-angle shot', 'close-up'). The pose and angle are the main focus.`;
 
                 if (basePrompt2 && uploadedFileParts2) {
                     // Two characters prompt
-                    fullPrompt = `Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Using the first provided image as a strict reference for Character 1's face, appearance, and art style, and the second image for Character 2, redraw them both together in the following scene: ${pose}.${propInstruction} Both characters should have ${expression} on their faces. Do not alter their identities.`;
+                    fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face, appearance, and art style. Use the second image for Character 2. Preserving the exact likeness from the reference images is the highest priority. ${sceneInstruction}${propInstruction} Both characters should have ${expression}. ${consistentBackground}`;
                 } else {
                     // Single character prompt
-                    fullPrompt = `A character is described as: "${basePrompt1}". Using the provided image as a strict reference for the character's face, appearance, and art style, redraw them in the following scene: ${pose}.${propInstruction} The character should have ${expression} on their face. Do not alter their identity.`;
+                    fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face, appearance, and art style. Preserving the exact likeness from the reference image is the highest priority. ${sceneInstruction}${propInstruction} The character should have ${expression}. ${consistentBackground}`;
                 }
 
                 return generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, placeholder);
@@ -438,7 +432,7 @@ async function main() {
 
         if (customPosesText) {
             posesToGenerate = customPosesText
-                .split('\n')
+                .split(/\r\n|\r|\n/) // Use a more robust regex to split lines, handling CRLF, CR, and LF.
                 .map(p => p.trim())
                 .filter(p => p.length > 0);
         } else {
@@ -446,7 +440,7 @@ async function main() {
             posesToGenerate = uploadedFileParts2 ? twoCharacterPoses : singleCharacterPoses;
         }
 
-        const maxPoses = 10;
+        const maxPoses = 5;
         if (posesToGenerate.length > maxPoses) {
             if (customPosesText) { // Only show alert if user provided custom poses
                 alert(`You have entered ${posesToGenerate.length} poses. The maximum number of poses allowed is ${maxPoses}. Only the first ${maxPoses} will be generated.`);
