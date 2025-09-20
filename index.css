@@ -264,3 +264,43 @@ input[type="file"]::file-selector-button:hover {
 .download-button:hover {
     background-color: #66bb6a;
 }
+
+#generation-controls {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    text-align: left;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+#aspect-ratio-select,
+#art-style-select {
+    background-color: #2c2c31;
+    color: #f0f0f0;
+    border: 2px solid #4a4a50;
+    border-radius: 5px;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cccccc' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1em;
+    padding-right: 2.5rem;
+}

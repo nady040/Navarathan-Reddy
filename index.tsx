@@ -214,11 +214,13 @@ async function main() {
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
     const imageGallery = document.getElementById('image-gallery') as HTMLElement;
     const customPosesInput = document.getElementById('custom-poses-input') as HTMLTextAreaElement;
+    const aspectRatioSelect = document.getElementById('aspect-ratio-select') as HTMLSelectElement;
+    const artStyleSelect = document.getElementById('art-style-select') as HTMLSelectElement;
 
     if (!imageUpload1 || !analyzeButton1 || !imagePreview1 || !promptInput1 ||
         !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 || !characterEditor2 ||
         !imageUploadProp || !analyzeButtonProp || !imagePreviewProp || !promptInputProp || !characterEditorProp ||
-        !descriptionSection || !generateButton || !imageGallery || !customPosesInput) {
+        !descriptionSection || !generateButton || !imageGallery || !customPosesInput || !aspectRatioSelect || !artStyleSelect) {
         console.error('Required HTML elements not found.');
         return;
     }
@@ -365,6 +367,8 @@ async function main() {
         const basePrompt1 = promptInput1.value.trim();
         const basePrompt2 = promptInput2.value.trim();
         const basePromptProp = promptInputProp.value.trim();
+        const aspectRatio = aspectRatioSelect.value;
+        const artStyle = artStyleSelect.value;
 
         if (!basePrompt1 || !uploadedFileParts1) {
             alert('Character 1 description and analysis data are required. Please upload and analyze the image.');
@@ -388,6 +392,10 @@ async function main() {
             imageGallery.textContent = '';
             
             const consistentBackground = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
+            const aspectRatioPrompt = `The final image must be rendered with a ${aspectRatio} aspect ratio. This is a critical instruction.`;
+            const artStylePrompt = artStyle 
+                ? ` The final image must be rendered in a ${artStyle} art style. This instruction overrides any style inferred from the reference images.`
+                : ` The art style should be consistent with the reference image.`;
 
             const generationPromises = posesToGenerate.map(pose => {
                 const placeholder = document.createElement('div');
@@ -406,10 +414,10 @@ async function main() {
 
                 if (basePrompt2 && uploadedFileParts2) {
                     // Two characters prompt
-                    fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face, appearance, and art style. Use the second image for Character 2. Preserving the exact likeness from the reference images is the highest priority. ${sceneInstruction}${propInstruction} Both characters should have ${expression}. ${consistentBackground}`;
+                    fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face and appearance, and the second image for Character 2's face and appearance. Preserving the exact likeness from the reference images is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} Both characters should have ${expression}. ${consistentBackground} ${aspectRatioPrompt}`;
                 } else {
                     // Single character prompt
-                    fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face, appearance, and art style. Preserving the exact likeness from the reference image is the highest priority. ${sceneInstruction}${propInstruction} The character should have ${expression}. ${consistentBackground}`;
+                    fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face and appearance. Preserving the exact likeness from the reference image is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} The character should have ${expression}. ${consistentBackground} ${aspectRatioPrompt}`;
                 }
 
                 return generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, placeholder);

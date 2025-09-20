@@ -60,7 +60,31 @@
             <textarea id="custom-poses-input" rows="8" placeholder="e.g., A thoughtful profile view of the character looking into the distance.&#10;A dynamic low-angle shot of the character striking a heroic pose.&#10;For two characters: A profile view of the two characters shaking hands."></textarea>
         </div>
         
-        <button id="generate-button">Generate Poses</button>
+        <div id="generation-controls">
+            <div class="form-group">
+                <label for="art-style-select">Art Style</label>
+                <select id="art-style-select">
+                    <option value="" selected>Default (from image)</option>
+                    <option value="photorealistic">Photorealistic</option>
+                    <option value="anime">Anime</option>
+                    <option value="watercolor">Watercolor</option>
+                    <option value="cartoonish">Cartoon</option>
+                    <option value="pixel art">Pixel Art</option>
+                    <option value="impressionistic oil painting">Oil Painting</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="aspect-ratio-select">Aspect Ratio</label>
+                <select id="aspect-ratio-select">
+                    <option value="1:1" selected>Square (1:1)</option>
+                    <option value="9:16">Portrait (9:16)</option>
+                    <option value="16:9">Landscape (16:9)</option>
+                    <option value="3:4">Portrait (3:4)</option>
+                    <option value="4:3">Landscape (4:3)</option>
+                </select>
+            </div>
+            <button id="generate-button">Generate Poses</button>
+        </div>
     </div>
 
     <div id="image-gallery"></div>
