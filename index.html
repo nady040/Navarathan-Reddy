@@ -31,6 +31,11 @@
             <input type="file" id="image-upload-prop" accept="image/*">
             <button id="analyze-button-prop" disabled>Analyze Prop</button>
         </div>
+        <div class="character-control">
+            <label for="image-upload-background" class="upload-label">1. Upload Background (Optional)</label>
+            <input type="file" id="image-upload-background" accept="image/*">
+            <button id="analyze-button-background" disabled>Analyze Background</button>
+        </div>
     </div>
 
     <div id="description-section" class="hidden">
@@ -51,6 +56,11 @@
                 <h3>Prop</h3>
                 <img id="image-preview-prop" src="#" alt="Your uploaded prop" />
                 <textarea id="prompt-input-prop" rows="15" placeholder="AI-generated description for the prop..."></textarea>
+            </div>
+            <div class="character-editor hidden" id="character-editor-background">
+                <h3>Background</h3>
+                <img id="image-preview-background" src="#" alt="Your uploaded background" />
+                <textarea id="prompt-input-background" rows="15" placeholder="AI-generated description for the background..."></textarea>
             </div>
         </div>
 

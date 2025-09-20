@@ -111,6 +111,32 @@ async function generateDescriptionFromPropImage(base64Image: string, mimeType: s
     return response.text.trim();
 }
 
+/**
+ * Generates a descriptive prompt for a background image.
+ * @param {string} base64Image The base64 encoded image.
+ * @param {string} mimeType The mime type of the image.
+ * @returns {Promise<string>} A descriptive prompt.
+ */
+async function generateDescriptionFromBackgroundImage(base64Image: string, mimeType: string): Promise<string> {
+    const response = await ai.models.generateContent({
+        model: visionModel,
+        contents: {
+            parts: [
+                {
+                    text: 'Act as an expert background artist. Your goal is to create a "scene description" prompt for an image generation model. Describe the environment in extreme detail. Focus on the location, time of day, lighting (e.g., "golden hour," "overcast," "dappled sunlight"), mood, key landmarks, and overall art style. The output must be a single, dense paragraph, ready to be used as a base prompt for recreating this exact scene.'
+                },
+                {
+                    inlineData: {
+                        data: base64Image,
+                        mimeType: mimeType,
+                    },
+                },
+            ],
+        },
+    });
+    return response.text.trim();
+}
+
 
 /**
  * Generates a single image and replaces a placeholder element with the result.
@@ -118,9 +144,10 @@ async function generateDescriptionFromPropImage(base64Image: string, mimeType: s
  * @param {object} imageParts1 The generative parts for character 1.
  * @param {object | null} imageParts2 The generative parts for character 2.
  * @param {object | null} imagePartsProp The generative parts for the prop.
+ * @param {object | null} imagePartsBackground The generative parts for the background.
  * @param {HTMLElement} placeholderElement The placeholder element to replace.
  */
-async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imagePartsProp: { base64: string, mimeType: string } | null, placeholderElement: HTMLElement) {
+async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imagePartsProp: { base64: string, mimeType: string } | null, imagePartsBackground: { base64: string, mimeType: string } | null, placeholderElement: HTMLElement) {
     try {
         const parts: ({ inlineData: { data: string; mimeType: string; }; } | { text: string; })[] = [
             { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
@@ -131,6 +158,9 @@ async function generateAndDisplayImage(prompt: string, imageParts1: { base64: st
         }
         if (imagePartsProp) {
             parts.push({ inlineData: { data: imagePartsProp.base64, mimeType: imagePartsProp.mimeType } });
+        }
+        if (imagePartsBackground) {
+            parts.push({ inlineData: { data: imagePartsBackground.base64, mimeType: imagePartsBackground.mimeType } });
         }
         parts.push({ text: prompt });
         
@@ -208,6 +238,13 @@ async function main() {
     const imagePreviewProp = document.getElementById('image-preview-prop') as HTMLImageElement;
     const promptInputProp = document.getElementById('prompt-input-prop') as HTMLTextAreaElement;
     const characterEditorProp = document.getElementById('character-editor-prop') as HTMLElement;
+
+    // Background controls
+    const imageUploadBackground = document.getElementById('image-upload-background') as HTMLInputElement;
+    const analyzeButtonBackground = document.getElementById('analyze-button-background') as HTMLButtonElement;
+    const imagePreviewBackground = document.getElementById('image-preview-background') as HTMLImageElement;
+    const promptInputBackground = document.getElementById('prompt-input-background') as HTMLTextAreaElement;
+    const characterEditorBackground = document.getElementById('character-editor-background') as HTMLElement;
     
     // Global controls
     const descriptionSection = document.getElementById('description-section') as HTMLElement;
@@ -220,6 +257,7 @@ async function main() {
     if (!imageUpload1 || !analyzeButton1 || !imagePreview1 || !promptInput1 ||
         !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 || !characterEditor2 ||
         !imageUploadProp || !analyzeButtonProp || !imagePreviewProp || !promptInputProp || !characterEditorProp ||
+        !imageUploadBackground || !analyzeButtonBackground || !imagePreviewBackground || !promptInputBackground || !characterEditorBackground ||
         !descriptionSection || !generateButton || !imageGallery || !customPosesInput || !aspectRatioSelect || !artStyleSelect) {
         console.error('Required HTML elements not found.');
         return;
@@ -231,6 +269,8 @@ async function main() {
     let uploadedFileParts2: { base64: string, mimeType: string } | null = null;
     let uploadedFileProp: File | null = null;
     let uploadedFilePartsProp: { base64: string, mimeType: string } | null = null;
+    let uploadedFileBackground: File | null = null;
+    let uploadedFilePartsBackground: { base64: string, mimeType: string } | null = null;
 
     function checkAndShowSections() {
         if (uploadedFileParts1) {
@@ -239,17 +279,9 @@ async function main() {
             descriptionSection.classList.add('hidden');
         }
 
-        if(uploadedFileParts2) {
-            characterEditor2.classList.remove('hidden');
-        } else {
-            characterEditor2.classList.add('hidden');
-        }
-
-        if(uploadedFilePartsProp) {
-            characterEditorProp.classList.remove('hidden');
-        } else {
-            characterEditorProp.classList.add('hidden');
-        }
+        characterEditor2.classList.toggle('hidden', !uploadedFileParts2);
+        characterEditorProp.classList.toggle('hidden', !uploadedFilePartsProp);
+        characterEditorBackground.classList.toggle('hidden', !uploadedFilePartsBackground);
     }
 
     imageUpload1.addEventListener('change', () => {
@@ -312,6 +344,27 @@ async function main() {
         }
     });
 
+    imageUploadBackground.addEventListener('change', () => {
+        if (imageUploadBackground.files && imageUploadBackground.files.length > 0) {
+            uploadedFileBackground = imageUploadBackground.files[0];
+            analyzeButtonBackground.disabled = false;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreviewBackground.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(uploadedFileBackground);
+            uploadedFilePartsBackground = null;
+            promptInputBackground.value = '';
+            checkAndShowSections();
+        } else {
+            uploadedFileBackground = null;
+            uploadedFilePartsBackground = null;
+            analyzeButtonBackground.disabled = true;
+            checkAndShowSections();
+        }
+    });
+
+
     async function handleAnalysis(
         file: File | null,
         button: HTMLButtonElement,
@@ -359,6 +412,11 @@ async function main() {
         checkAndShowSections();
     });
 
+    analyzeButtonBackground.addEventListener('click', async () => {
+        uploadedFilePartsBackground = await handleAnalysis(uploadedFileBackground, analyzeButtonBackground, promptInputBackground, generateDescriptionFromBackgroundImage);
+        checkAndShowSections();
+    });
+
     /**
      * Kicks off the image generation process with a given set of poses.
      * @param posesToGenerate An array of pose description strings.
@@ -367,6 +425,7 @@ async function main() {
         const basePrompt1 = promptInput1.value.trim();
         const basePrompt2 = promptInput2.value.trim();
         const basePromptProp = promptInputProp.value.trim();
+        const basePromptBackground = promptInputBackground.value.trim();
         const aspectRatio = aspectRatioSelect.value;
         const artStyle = artStyleSelect.value;
 
@@ -384,6 +443,11 @@ async function main() {
              alert('The prop has an image uploaded but no description. Please analyze the prop or clear the image.');
              return;
         }
+
+        if (uploadedFilePartsBackground && !basePromptBackground) {
+             alert('The background has an image uploaded but no description. Please analyze the background or clear the image.');
+             return;
+        }
         
         const originalButtonText = generateButton.textContent;
         try {
@@ -391,7 +455,13 @@ async function main() {
             generateButton.textContent = `Generating (${posesToGenerate.length})...`;
             imageGallery.textContent = '';
             
-            const consistentBackground = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
+            let backgroundInstruction: string;
+            if (basePromptBackground && uploadedFilePartsBackground) {
+                backgroundInstruction = `The background of the scene must be based on the provided background image and is described as: "${basePromptBackground}". Use the provided background image as a strict and absolute reference for the environment.`;
+            } else {
+                backgroundInstruction = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
+            }
+
             const aspectRatioPrompt = `The final image must be rendered with a ${aspectRatio} aspect ratio. This is a critical instruction.`;
             const artStylePrompt = artStyle 
                 ? ` The final image must be rendered in a ${artStyle} art style. This instruction overrides any style inferred from the reference images.`
@@ -414,13 +484,13 @@ async function main() {
 
                 if (basePrompt2 && uploadedFileParts2) {
                     // Two characters prompt
-                    fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face and appearance, and the second image for Character 2's face and appearance. Preserving the exact likeness from the reference images is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} Both characters should have ${expression}. ${consistentBackground} ${aspectRatioPrompt}`;
+                    fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face and appearance, and the second image for Character 2's face and appearance. Preserving the exact likeness from the reference images is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} Both characters should have ${expression}. ${backgroundInstruction} ${aspectRatioPrompt}`;
                 } else {
                     // Single character prompt
-                    fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face and appearance. Preserving the exact likeness from the reference image is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} The character should have ${expression}. ${consistentBackground} ${aspectRatioPrompt}`;
+                    fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face and appearance. Preserving the exact likeness from the reference image is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} The character should have ${expression}. ${backgroundInstruction} ${aspectRatioPrompt}`;
                 }
 
-                return generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, placeholder);
+                return generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, uploadedFilePartsBackground, placeholder);
             });
             
             await Promise.all(generationPromises);
