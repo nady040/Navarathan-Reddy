@@ -65,9 +65,70 @@
         </div>
 
         <div id="pose-customization-inline">
-            <h2>3. Describe The Scene (Optional)</h2>
-            <p>Enter one scene per line (max 5). For quality, focus on clear actions and camera angles (e.g., "profile view," "low-angle shot"). If left empty, 5 default poses will be generated.</p>
-            <textarea id="custom-poses-input" rows="8" placeholder="e.g., A thoughtful profile view of the character looking into the distance.&#10;A dynamic low-angle shot of the character striking a heroic pose.&#10;For two characters: A profile view of the two characters shaking hands."></textarea>
+            <h2>3. Describe The Scenes (Optional)</h2>
+            <p>Describe up to 5 scenes. If left empty, default poses will be generated.</p>
+            <div id="scene-inputs-container">
+                <div class="scene-input-row">
+                    <input type="text" class="scene-input" placeholder="e.g., A thoughtful look into the distance.">
+                    <select class="angle-select">
+                        <option value="" selected>Default Angle</option>
+                        <option value="low-angle shot">Low Angle</option>
+                        <option value="high-angle shot">High Angle</option>
+                        <option value="wide-angle shot">Wide Angle</option>
+                        <option value="close-up shot">Close-up</option>
+                        <option value="profile view">Profile View</option>
+                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
+                    </select>
+                </div>
+                <div class="scene-input-row">
+                    <input type="text" class="scene-input" placeholder="e.g., Striking a heroic pose.">
+                     <select class="angle-select">
+                        <option value="" selected>Default Angle</option>
+                        <option value="low-angle shot">Low Angle</option>
+                        <option value="high-angle shot">High Angle</option>
+                        <option value="wide-angle shot">Wide Angle</option>
+                        <option value="close-up shot">Close-up</option>
+                        <option value="profile view">Profile View</option>
+                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
+                    </select>
+                </div>
+                <div class="scene-input-row">
+                    <input type="text" class="scene-input" placeholder="e.g., Shaking hands to seal an agreement.">
+                     <select class="angle-select">
+                        <option value="" selected>Default Angle</option>
+                        <option value="low-angle shot">Low Angle</option>
+                        <option value="high-angle shot">High Angle</option>
+                        <option value="wide-angle shot">Wide Angle</option>
+                        <option value="close-up shot">Close-up</option>
+                        <option value="profile view">Profile View</option>
+                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
+                    </select>
+                </div>
+                <div class="scene-input-row">
+                    <input type="text" class="scene-input" placeholder="e.g., Laughing together at a shared joke.">
+                     <select class="angle-select">
+                        <option value="" selected>Default Angle</option>
+                        <option value="low-angle shot">Low Angle</option>
+                        <option value="high-angle shot">High Angle</option>
+                        <option value="wide-angle shot">Wide Angle</option>
+                        <option value="close-up shot">Close-up</option>
+                        <option value="profile view">Profile View</option>
+                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
+                    </select>
+                </div>
+                <div class="scene-input-row">
+                    <input type="text" class="scene-input" placeholder="e.g., Working together to overcome an obstacle.">
+                     <select class="angle-select">
+                        <option value="" selected>Default Angle</option>
+                        <option value="low-angle shot">Low Angle</option>
+                        <option value="high-angle shot">High Angle</option>
+                        <option value="wide-angle shot">Wide Angle</option>
+                        <option value="close-up shot">Close-up</option>
+                        <option value="profile view">Profile View</option>
+                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
+                    </select>
+                </div>
+            </div>
         </div>
         
         <div id="generation-controls">

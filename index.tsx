@@ -250,7 +250,7 @@ async function main() {
     const descriptionSection = document.getElementById('description-section') as HTMLElement;
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
     const imageGallery = document.getElementById('image-gallery') as HTMLElement;
-    const customPosesInput = document.getElementById('custom-poses-input') as HTMLTextAreaElement;
+    const sceneInputRows = document.querySelectorAll('.scene-input-row');
     const aspectRatioSelect = document.getElementById('aspect-ratio-select') as HTMLSelectElement;
     const artStyleSelect = document.getElementById('art-style-select') as HTMLSelectElement;
 
@@ -258,7 +258,7 @@ async function main() {
         !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 || !characterEditor2 ||
         !imageUploadProp || !analyzeButtonProp || !imagePreviewProp || !promptInputProp || !characterEditorProp ||
         !imageUploadBackground || !analyzeButtonBackground || !imagePreviewBackground || !promptInputBackground || !characterEditorBackground ||
-        !descriptionSection || !generateButton || !imageGallery || !customPosesInput || !aspectRatioSelect || !artStyleSelect) {
+        !descriptionSection || !generateButton || !imageGallery || !sceneInputRows || !aspectRatioSelect || !artStyleSelect) {
         console.error('Required HTML elements not found.');
         return;
     }
@@ -505,31 +505,27 @@ async function main() {
     }
     
     generateButton.addEventListener('click', () => {
-        const customPosesText = customPosesInput.value.trim();
-        let posesToGenerate: string[];
+        const posesToGenerate: string[] = [];
 
-        if (customPosesText) {
-            posesToGenerate = customPosesText
-                .split(/\r\n|\r|\n/) // Use a more robust regex to split lines, handling CRLF, CR, and LF.
-                .map(p => p.trim())
-                .filter(p => p.length > 0);
-        } else {
-            // Use default poses based on number of characters
-            posesToGenerate = uploadedFileParts2 ? twoCharacterPoses : singleCharacterPoses;
-        }
+        sceneInputRows.forEach(row => {
+            const input = row.querySelector('.scene-input') as HTMLInputElement;
+            const select = row.querySelector('.angle-select') as HTMLSelectElement;
+            const description = input.value.trim();
+            const angle = select.value.trim();
 
-        const maxPoses = 5;
-        if (posesToGenerate.length > maxPoses) {
-            if (customPosesText) { // Only show alert if user provided custom poses
-                alert(`You have entered ${posesToGenerate.length} poses. The maximum number of poses allowed is ${maxPoses}. Only the first ${maxPoses} will be generated.`);
+            if (description) {
+                // Combine the angle and description into a single, clear instruction.
+                const finalPose = angle ? `${angle}: ${description}` : description;
+                posesToGenerate.push(finalPose);
             }
-            posesToGenerate = posesToGenerate.slice(0, maxPoses);
-        }
+        });
 
         if (posesToGenerate.length > 0) {
             startGeneration(posesToGenerate);
         } else {
-            alert('Please enter at least one pose description, or leave the box empty to use the default poses.');
+            // Use default poses if no custom poses are provided
+            const defaultPoses = uploadedFileParts2 ? twoCharacterPoses : singleCharacterPoses;
+            startGeneration(defaultPoses);
         }
     });
 }
