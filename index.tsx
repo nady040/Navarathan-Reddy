@@ -42,6 +42,24 @@ const expressions = [
   'a serene and calm expression'
 ];
 
+/**
+ * All the data required to generate a single image.
+ */
+interface GenerationContext {
+    pose: string;
+    addRandomExpression: boolean;
+    imageParts1: { base64: string, mimeType: string };
+    imageParts2: { base64: string, mimeType: string } | null;
+    imagePartsProp: { base64: string, mimeType: string } | null;
+    imagePartsBackground: { base64: string, mimeType: string } | null;
+    basePrompt1: string;
+    basePrompt2: string | null;
+    basePromptProp: string | null;
+    basePromptBackground: string | null;
+    aspectRatio: string;
+    artStyle: string;
+}
+
 
 /**
  * Converts a file to a base64 string.
@@ -137,17 +155,64 @@ async function generateDescriptionFromBackgroundImage(base64Image: string, mimeT
     return response.text.trim();
 }
 
+/**
+ * Constructs the full prompt string for image generation based on context.
+ * @param {GenerationContext} context - The context for the generation.
+ * @returns {string} The complete prompt string.
+ */
+function buildPrompt(context: GenerationContext): string {
+    const {
+        pose, addRandomExpression, basePrompt1, basePrompt2, basePromptProp,
+        basePromptBackground, aspectRatio, artStyle, imageParts2,
+        imagePartsProp, imagePartsBackground
+    } = context;
+
+    let backgroundInstruction: string;
+    if (basePromptBackground && imagePartsBackground) {
+        backgroundInstruction = `The background of the scene must be based on the provided background image and is described as: "${basePromptBackground}". Use the provided background image as a strict and absolute reference for the environment.`;
+    } else {
+        backgroundInstruction = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
+    }
+
+    const aspectRatioPrompt = `The final image must be rendered with a ${aspectRatio} aspect ratio. This is a critical instruction.`;
+    const artStylePrompt = artStyle
+        ? ` The final image must be rendered in a ${artStyle} art style. This instruction overrides any style inferred from the reference images.`
+        : ` The art style should be consistent with the reference image.`;
+
+    let propInstruction = '';
+    if (basePromptProp && imagePartsProp) {
+        propInstruction = ` The scene must also include a prop described as "${basePromptProp}", using the provided prop image as a strict reference for its appearance.`;
+    }
+
+    const sceneInstruction = `Redraw them in the following scene: "${pose}". It is CRITICAL to accurately render the specified camera angle (e.g., 'profile view', 'low-angle shot', 'close-up'). The pose and angle are the main focus.`;
+
+    let expressionInstruction = '';
+    if (addRandomExpression) {
+        const expression = expressions[Math.floor(Math.random() * expressions.length)];
+        const subject = imageParts2 ? 'Both characters' : 'The character';
+        expressionInstruction = ` ${subject} should have ${expression}.`;
+    }
+
+    let fullPrompt: string;
+    if (basePrompt2 && imageParts2) {
+        fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face and appearance, and the second image for Character 2's face and appearance. Preserving the exact likeness from the reference images is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction}${expressionInstruction} ${backgroundInstruction} ${aspectRatioPrompt}`;
+    } else {
+        fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face and appearance. Preserving the exact likeness from the reference image is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction}${expressionInstruction} ${backgroundInstruction} ${aspectRatioPrompt}`;
+    }
+
+    return fullPrompt;
+}
+
 
 /**
  * Generates a single image and replaces a placeholder element with the result.
- * @param {string} prompt The full prompt for image generation.
- * @param {object} imageParts1 The generative parts for character 1.
- * @param {object | null} imageParts2 The generative parts for character 2.
- * @param {object | null} imagePartsProp The generative parts for the prop.
- * @param {object | null} imagePartsBackground The generative parts for the background.
+ * @param {GenerationContext} context The full context for the image generation.
  * @param {HTMLElement} placeholderElement The placeholder element to replace.
  */
-async function generateAndDisplayImage(prompt: string, imageParts1: { base64: string, mimeType: string }, imageParts2: { base64: string, mimeType: string } | null, imagePartsProp: { base64: string, mimeType: string } | null, imagePartsBackground: { base64: string, mimeType: string } | null, placeholderElement: HTMLElement) {
+async function generateAndDisplayImage(context: GenerationContext, placeholderElement: HTMLElement) {
+    const prompt = buildPrompt(context);
+    const { imageParts1, imageParts2, imagePartsProp, imagePartsBackground } = context;
+
     try {
         const parts: ({ inlineData: { data: string; mimeType: string; }; } | { text: string; })[] = [
             { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
@@ -187,6 +252,9 @@ async function generateAndDisplayImage(prompt: string, imageParts1: { base64: st
                     const overlay = document.createElement('div');
                     overlay.className = 'gallery-overlay';
 
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'button-container';
+
                     const downloadButton = document.createElement('button');
                     downloadButton.className = 'download-button';
                     downloadButton.textContent = 'Download';
@@ -199,7 +267,20 @@ async function generateAndDisplayImage(prompt: string, imageParts1: { base64: st
                         document.body.removeChild(a);
                     };
 
-                    overlay.appendChild(downloadButton);
+                    const regenerateButton = document.createElement('button');
+                    regenerateButton.className = 'regenerate-button';
+                    regenerateButton.textContent = 'Regenerate';
+                    regenerateButton.onclick = () => {
+                        const newPlaceholder = document.createElement('div');
+                        newPlaceholder.className = 'gallery-placeholder';
+                        galleryCard.replaceWith(newPlaceholder);
+                        // Call this function again with the same context to regenerate
+                        generateAndDisplayImage(context, newPlaceholder);
+                    };
+
+                    buttonContainer.appendChild(downloadButton);
+                    buttonContainer.appendChild(regenerateButton);
+                    overlay.appendChild(buttonContainer);
                     galleryCard.appendChild(img);
                     galleryCard.appendChild(overlay);
 
@@ -419,9 +500,10 @@ async function main() {
 
     /**
      * Kicks off the image generation process with a given set of poses.
-     * @param posesToGenerate An array of pose description strings.
+     * @param {string[]} posesToGenerate An array of pose description strings.
+     * @param {boolean} addRandomExpression Whether to add a random expression to the prompt.
      */
-    async function startGeneration(posesToGenerate: string[]) {
+    async function startGeneration(posesToGenerate: string[], addRandomExpression: boolean) {
         const basePrompt1 = promptInput1.value.trim();
         const basePrompt2 = promptInput2.value.trim();
         const basePromptProp = promptInputProp.value.trim();
@@ -454,43 +536,28 @@ async function main() {
             generateButton.disabled = true;
             generateButton.textContent = `Generating (${posesToGenerate.length})...`;
             imageGallery.textContent = '';
-            
-            let backgroundInstruction: string;
-            if (basePromptBackground && uploadedFilePartsBackground) {
-                backgroundInstruction = `The background of the scene must be based on the provided background image and is described as: "${basePromptBackground}". Use the provided background image as a strict and absolute reference for the environment.`;
-            } else {
-                backgroundInstruction = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
-            }
-
-            const aspectRatioPrompt = `The final image must be rendered with a ${aspectRatio} aspect ratio. This is a critical instruction.`;
-            const artStylePrompt = artStyle 
-                ? ` The final image must be rendered in a ${artStyle} art style. This instruction overrides any style inferred from the reference images.`
-                : ` The art style should be consistent with the reference image.`;
 
             const generationPromises = posesToGenerate.map(pose => {
                 const placeholder = document.createElement('div');
                 placeholder.className = 'gallery-placeholder';
                 imageGallery.appendChild(placeholder);
                 
-                const expression = expressions[Math.floor(Math.random() * expressions.length)];
-                let fullPrompt: string;
-                let propInstruction = '';
+                const context: GenerationContext = {
+                    pose,
+                    addRandomExpression,
+                    imageParts1: uploadedFileParts1!,
+                    imageParts2: uploadedFileParts2,
+                    imagePartsProp: uploadedFilePartsProp,
+                    imagePartsBackground: uploadedFilePartsBackground,
+                    basePrompt1,
+                    basePrompt2,
+                    basePromptProp,
+                    basePromptBackground,
+                    aspectRatio,
+                    artStyle,
+                };
 
-                if (basePromptProp && uploadedFilePartsProp) {
-                    propInstruction = ` The scene must also include a prop described as "${basePromptProp}", using the provided prop image as a strict reference for its appearance.`;
-                }
-                
-                const sceneInstruction = `Redraw them in the following scene: "${pose}". It is CRITICAL to accurately render the specified camera angle (e.g., 'profile view', 'low-angle shot', 'close-up'). The pose and angle are the main focus.`;
-
-                if (basePrompt2 && uploadedFileParts2) {
-                    // Two characters prompt
-                    fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face and appearance, and the second image for Character 2's face and appearance. Preserving the exact likeness from the reference images is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} Both characters should have ${expression}. ${backgroundInstruction} ${aspectRatioPrompt}`;
-                } else {
-                    // Single character prompt
-                    fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face and appearance. Preserving the exact likeness from the reference image is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction} The character should have ${expression}. ${backgroundInstruction} ${aspectRatioPrompt}`;
-                }
-
-                return generateAndDisplayImage(fullPrompt, uploadedFileParts1, uploadedFileParts2, uploadedFilePartsProp, uploadedFilePartsBackground, placeholder);
+                return generateAndDisplayImage(context, placeholder);
             });
             
             await Promise.all(generationPromises);
@@ -521,11 +588,11 @@ async function main() {
         });
 
         if (posesToGenerate.length > 0) {
-            startGeneration(posesToGenerate);
+            startGeneration(posesToGenerate, false);
         } else {
             // Use default poses if no custom poses are provided
             const defaultPoses = uploadedFileParts2 ? twoCharacterPoses : singleCharacterPoses;
-            startGeneration(defaultPoses);
+            startGeneration(defaultPoses, true);
         }
     });
 }

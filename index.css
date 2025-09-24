@@ -269,6 +269,11 @@ input[type="file"]::file-selector-button:hover {
     opacity: 1;
 }
 
+.button-container {
+    display: flex;
+    gap: 1rem;
+}
+
 .download-button {
     padding: 0.8rem 1.5rem;
     font-size: 1rem;
@@ -283,6 +288,22 @@ input[type="file"]::file-selector-button:hover {
 .download-button:hover {
     background-color: #66bb6a;
 }
+
+.regenerate-button {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.regenerate-button:hover {
+    background-color: #0056b3;
+}
+
 
 #generation-controls {
     display: flex;
