@@ -169,7 +169,7 @@ function buildPrompt(context: GenerationContext): string {
 
     let backgroundInstruction: string;
     if (basePromptBackground && imagePartsBackground) {
-        backgroundInstruction = `The background of the scene must be based on the provided background image and is described as: "${basePromptBackground}". Use the provided background image as a strict and absolute reference for the environment.`;
+        backgroundInstruction = `The background of the scene must be based on the provided background image and is described as: "${basePromptBackground}". Use the provided background image as a strict and absolute reference for the environment. It is critical that you seamlessly blend the character(s) into this background by matching the lighting, shadows, color temperature, and overall texture of the scene. The character(s) should look like they are naturally part of the environment.`;
     } else {
         backgroundInstruction = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
     }
