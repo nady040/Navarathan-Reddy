@@ -8,24 +8,36 @@ import {GoogleGenAI, Modality} from '@google/genai';
 
 const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
-const imageEditModel = 'gemini-2.5-flash-image-preview';
+const imageEditModel = 'gemini-2.5-flash-image';
 const visionModel = 'gemini-2.5-flash';
 
-// Array of different poses for two characters
-const twoCharacterPoses = [
-  'A dramatic low-angle shot of both characters standing back-to-back, preparing for a fight.',
-  'An over-the-shoulder shot of character 1 teaching character 2 a new skill.',
-  'A profile view of the two characters shaking hands, sealing an agreement.',
-  'A close-up shot focusing on both characters laughing together at a shared joke.',
-  'An action shot of the two characters working together to overcome an obstacle.',
-];
+// Array of different poses to generate
+const poses = [
+  // Combat / Action
+  'in a dynamic high-kick pose',
+  'launching a powerful uppercut',
+  'wielding a long wooden bo staff in a defensive stance',
+  'drawing a sword from its sheath',
+  'aiming a bow and arrow',
+  'casting a magic spell with glowing hands',
+  
+  // Stances
+  'in a graceful crane stance, balancing on one leg',
+  'in a low, powerful horse stance with fists ready',
+  'in a classic praying mantis style pose',
+  'executing a fluid snake style movement, low to the ground',
 
-const singleCharacterPoses = [
-  'A dynamic low-angle shot of the character striking a heroic pose.',
-  'A thoughtful profile view of the character looking into the distance.',
-  'A close-up shot capturing a moment of intense emotion on the character\'s face.',
-  'A full-body shot of the character in a fighting stance, ready for action.',
-  'A cozy scene of the character reading a book, seen from a high angle.',
+  // Dramatic / Emotive
+  'standing on a cliff edge, cape billowing in the wind',
+  'looking over their shoulder with a mysterious expression',
+  'raising a triumphant fist to the sky',
+  'kneeling in defeat, head bowed',
+  
+  // Relaxing / Casual
+  'leaning against a wall, arms crossed casually',
+  'sitting by a campfire, looking thoughtful',
+  'reading a book in a comfortable chair',
+  'walking through a bustling city street'
 ];
 
 // Array of different expressions
@@ -41,24 +53,6 @@ const expressions = [
   'a mischievous smirk',
   'a serene and calm expression'
 ];
-
-/**
- * All the data required to generate a single image.
- */
-interface GenerationContext {
-    pose: string;
-    addRandomExpression: boolean;
-    imageParts1: { base64: string, mimeType: string };
-    imageParts2: { base64: string, mimeType: string } | null;
-    imagePartsProp: { base64: string, mimeType: string } | null;
-    imagePartsBackground: { base64: string, mimeType: string } | null;
-    basePrompt1: string;
-    basePrompt2: string | null;
-    basePromptProp: string | null;
-    basePromptBackground: string | null;
-    aspectRatio: string;
-    artStyle: string;
-}
 
 
 /**
@@ -78,12 +72,12 @@ function fileToGenerativePart(file: File): Promise<{ base64: string, mimeType: s
 }
 
 /**
- * Generates a descriptive prompt for a character image.
+ * Generates a descriptive prompt from an image.
  * @param {string} base64Image The base64 encoded image.
  * @param {string} mimeType The mime type of the image.
  * @returns {Promise<string>} A descriptive prompt.
  */
-async function generateDescriptionFromCharacterImage(base64Image: string, mimeType: string): Promise<string> {
+async function generateDescriptionFromImage(base64Image: string, mimeType: string): Promise<string> {
     const response = await ai.models.generateContent({
         model: visionModel,
         contents: {
@@ -103,496 +97,217 @@ async function generateDescriptionFromCharacterImage(base64Image: string, mimeTy
     return response.text.trim();
 }
 
+
 /**
- * Generates a descriptive prompt for a prop image.
- * @param {string} base64Image The base64 encoded image.
- * @param {string} mimeType The mime type of the image.
- * @returns {Promise<string>} A descriptive prompt.
+ * Generates a single image based on a reference image and a prompt, then appends it to a parent element.
+ * @param {string} prompt The full prompt for image generation.
+ * @param {string} base64Image The base64 encoded reference image.
+ * @param {string} mimeType The mime type of the reference image.
+ * @param {HTMLElement} parentElement The element to append the image to.
+ * @param {boolean} clearParent Whether to clear the parent element before appending.
  */
-async function generateDescriptionFromPropImage(base64Image: string, mimeType: string): Promise<string> {
+async function generateAndDisplayImage(prompt: string, base64Image: string, mimeType: string, parentElement: HTMLElement, clearParent: boolean) {
     const response = await ai.models.generateContent({
-        model: visionModel,
+        model: imageEditModel,
         contents: {
             parts: [
-                {
-                    text: 'Act as an expert concept artist. Your goal is to create a "prop sheet" prompt for an image generation model. Describe the object in extreme detail. Focus on its material (e.g., "worn leather," "polished chrome"), texture, shape, color palette, size, specific markings or engravings, and overall art style. The output must be a single, dense paragraph, ready to be used as a base prompt.'
-                },
                 {
                     inlineData: {
                         data: base64Image,
                         mimeType: mimeType,
                     },
                 },
+                { text: prompt },
             ],
         },
-    });
-    return response.text.trim();
-}
-
-/**
- * Generates a descriptive prompt for a background image.
- * @param {string} base64Image The base64 encoded image.
- * @param {string} mimeType The mime type of the image.
- * @returns {Promise<string>} A descriptive prompt.
- */
-async function generateDescriptionFromBackgroundImage(base64Image: string, mimeType: string): Promise<string> {
-    const response = await ai.models.generateContent({
-        model: visionModel,
-        contents: {
-            parts: [
-                {
-                    text: 'Act as an expert background artist. Your goal is to create a "scene description" prompt for an image generation model. Describe the environment in extreme detail. Focus on the location, time of day, lighting (e.g., "golden hour," "overcast," "dappled sunlight"), mood, key landmarks, and overall art style. The output must be a single, dense paragraph, ready to be used as a base prompt for recreating this exact scene.'
-                },
-                {
-                    inlineData: {
-                        data: base64Image,
-                        mimeType: mimeType,
-                    },
-                },
-            ],
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
         },
     });
-    return response.text.trim();
-}
 
-/**
- * Constructs the full prompt string for image generation based on context.
- * @param {GenerationContext} context - The context for the generation.
- * @returns {string} The complete prompt string.
- */
-function buildPrompt(context: GenerationContext): string {
-    const {
-        pose, addRandomExpression, basePrompt1, basePrompt2, basePromptProp,
-        basePromptBackground, aspectRatio, artStyle, imageParts2,
-        imagePartsProp, imagePartsBackground
-    } = context;
-
-    let backgroundInstruction: string;
-    if (basePromptBackground && imagePartsBackground) {
-        backgroundInstruction = `The background of the scene must be based on the provided background image and is described as: "${basePromptBackground}". Use the provided background image as a strict and absolute reference for the environment. It is critical that you seamlessly blend the character(s) into this background by matching the lighting, shadows, color temperature, and overall texture of the scene. The character(s) should look like they are naturally part of the environment.`;
-    } else {
-        backgroundInstruction = 'The background must be a consistent, neutral, soft-focus studio background for all generated images. This is essential for character consistency.';
-    }
-
-    const aspectRatioPrompt = `The final image must be rendered with a ${aspectRatio} aspect ratio. This is a critical instruction.`;
-    const artStylePrompt = artStyle
-        ? ` The final image must be rendered in a ${artStyle} art style. This instruction overrides any style inferred from the reference images.`
-        : ` The art style should be consistent with the reference image.`;
-
-    let propInstruction = '';
-    if (basePromptProp && imagePartsProp) {
-        propInstruction = ` The scene must also include a prop described as "${basePromptProp}", using the provided prop image as a strict reference for its appearance.`;
-    }
-
-    const sceneInstruction = `Redraw them in the following scene: "${pose}". It is CRITICAL to accurately render the specified camera angle (e.g., 'profile view', 'low-angle shot', 'close-up'). The pose and angle are the main focus.`;
-
-    let expressionInstruction = '';
-    if (addRandomExpression) {
-        const expression = expressions[Math.floor(Math.random() * expressions.length)];
-        const subject = imageParts2 ? 'Both characters' : 'The character';
-        expressionInstruction = ` ${subject} should have ${expression}.`;
-    }
-
-    let fullPrompt: string;
-    if (basePrompt2 && imageParts2) {
-        fullPrompt = `You are a master character artist. Your task is to generate a scene with two characters. Character 1 is described as: "${basePrompt1}". Character 2 is described as: "${basePrompt2}". Use the first provided image as a strict and absolute reference for Character 1's face and appearance, and the second image for Character 2's face and appearance. Preserving the exact likeness from the reference images is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction}${expressionInstruction} ${backgroundInstruction} ${aspectRatioPrompt}`;
-    } else {
-        fullPrompt = `You are a master character artist. Your task is to generate a scene with one character. The character is described as: "${basePrompt1}". Use the provided image as a strict and absolute reference for the character's face and appearance. Preserving the exact likeness from the reference image is the highest priority.${artStylePrompt} ${sceneInstruction}${propInstruction}${expressionInstruction} ${backgroundInstruction} ${aspectRatioPrompt}`;
-    }
-
-    return fullPrompt;
-}
-
-
-/**
- * Generates a single image and replaces a placeholder element with the result.
- * @param {GenerationContext} context The full context for the image generation.
- * @param {HTMLElement} placeholderElement The placeholder element to replace.
- */
-async function generateAndDisplayImage(context: GenerationContext, placeholderElement: HTMLElement) {
-    const prompt = buildPrompt(context);
-    const { imageParts1, imageParts2, imagePartsProp, imagePartsBackground } = context;
-
-    try {
-        const parts: ({ inlineData: { data: string; mimeType: string; }; } | { text: string; })[] = [
-            { inlineData: { data: imageParts1.base64, mimeType: imageParts1.mimeType } },
-        ];
-
-        if (imageParts2) {
-            parts.push({ inlineData: { data: imageParts2.base64, mimeType: imageParts2.mimeType } });
+    if (response?.candidates?.[0]?.content?.parts) {
+        if (clearParent) {
+            parentElement.innerHTML = '';
         }
-        if (imagePartsProp) {
-            parts.push({ inlineData: { data: imagePartsProp.base64, mimeType: imagePartsProp.mimeType } });
-        }
-        if (imagePartsBackground) {
-            parts.push({ inlineData: { data: imagePartsBackground.base64, mimeType: imagePartsBackground.mimeType } });
-        }
-        parts.push({ text: prompt });
-        
-        const response = await ai.models.generateContent({
-            model: imageEditModel,
-            contents: { parts },
-            config: {
-                responseModalities: [Modality.IMAGE, Modality.TEXT],
-            },
-        });
-
-        if (response?.candidates?.[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) {
-                    const src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-                    
-                    const galleryCard = document.createElement('div');
-                    galleryCard.className = 'gallery-card';
-
-                    const img = new Image();
-                    img.src = src;
-                    img.alt = prompt;
-
-                    const overlay = document.createElement('div');
-                    overlay.className = 'gallery-overlay';
-
-                    const buttonContainer = document.createElement('div');
-                    buttonContainer.className = 'button-container';
-
-                    const downloadButton = document.createElement('button');
-                    downloadButton.className = 'download-button';
-                    downloadButton.textContent = 'Download';
-                    downloadButton.onclick = () => {
-                        const a = document.createElement('a');
-                        a.href = src;
-                        a.download = `pose-${Date.now()}.png`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    };
-
-                    const regenerateButton = document.createElement('button');
-                    regenerateButton.className = 'regenerate-button';
-                    regenerateButton.textContent = 'Regenerate';
-                    regenerateButton.onclick = () => {
-                        const newPlaceholder = document.createElement('div');
-                        newPlaceholder.className = 'gallery-placeholder';
-                        galleryCard.replaceWith(newPlaceholder);
-                        // Call this function again with the same context to regenerate
-                        generateAndDisplayImage(context, newPlaceholder);
-                    };
-
-                    buttonContainer.appendChild(downloadButton);
-                    buttonContainer.appendChild(regenerateButton);
-                    overlay.appendChild(buttonContainer);
-                    galleryCard.appendChild(img);
-                    galleryCard.appendChild(overlay);
-
-                    placeholderElement.replaceWith(galleryCard);
-                    return; // Exit after finding the first image
-                }
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                const src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                const img = new Image();
+                img.src = src;
+                img.alt = prompt;
+                parentElement.appendChild(img);
+                break; // Assume one image is generated per call
             }
         }
-        // If no image part was found in a successful response
-        throw new Error('No image data found in response.');
-
-    } catch (error) {
-        console.error('Image generation failed for prompt:', prompt, error);
-        placeholderElement.innerHTML = '&#x26A0;<br/>Failed'; // Warning sign icon
-        placeholderElement.classList.add('generation-error');
     }
 }
 
 async function main() {
-    // Character 1 controls
-    const imageUpload1 = document.getElementById('image-upload-1') as HTMLInputElement;
-    const analyzeButton1 = document.getElementById('analyze-button-1') as HTMLButtonElement;
-    const imagePreview1 = document.getElementById('image-preview-1') as HTMLImageElement;
-    const promptInput1 = document.getElementById('prompt-input-1') as HTMLTextAreaElement;
-
-    // Character 2 controls
-    const imageUpload2 = document.getElementById('image-upload-2') as HTMLInputElement;
-    const analyzeButton2 = document.getElementById('analyze-button-2') as HTMLButtonElement;
-    const imagePreview2 = document.getElementById('image-preview-2') as HTMLImageElement;
-    const promptInput2 = document.getElementById('prompt-input-2') as HTMLTextAreaElement;
-    const characterEditor2 = document.getElementById('character-editor-2') as HTMLElement;
-
-    // Prop controls
-    const imageUploadProp = document.getElementById('image-upload-prop') as HTMLInputElement;
-    const analyzeButtonProp = document.getElementById('analyze-button-prop') as HTMLButtonElement;
-    const imagePreviewProp = document.getElementById('image-preview-prop') as HTMLImageElement;
-    const promptInputProp = document.getElementById('prompt-input-prop') as HTMLTextAreaElement;
-    const characterEditorProp = document.getElementById('character-editor-prop') as HTMLElement;
-
-    // Background controls
-    const imageUploadBackground = document.getElementById('image-upload-background') as HTMLInputElement;
-    const analyzeButtonBackground = document.getElementById('analyze-button-background') as HTMLButtonElement;
-    const imagePreviewBackground = document.getElementById('image-preview-background') as HTMLImageElement;
-    const promptInputBackground = document.getElementById('prompt-input-background') as HTMLTextAreaElement;
-    const characterEditorBackground = document.getElementById('character-editor-background') as HTMLElement;
-    
-    // Global controls
-    const descriptionSection = document.getElementById('description-section') as HTMLElement;
+    // UI elements
+    const controls = document.getElementById('controls');
+    const imageUpload = document.getElementById('image-upload') as HTMLInputElement;
     const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
-    const imageGallery = document.getElementById('image-gallery') as HTMLElement;
-    const sceneInputRows = document.querySelectorAll('.scene-input-row');
-    const aspectRatioSelect = document.getElementById('aspect-ratio-select') as HTMLSelectElement;
+    const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
+    const modificationSelect = document.getElementById('modification-select') as HTMLSelectElement;
     const artStyleSelect = document.getElementById('art-style-select') as HTMLSelectElement;
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const imageGallery = document.getElementById('image-gallery');
+    
+    // Confirmation step elements
+    const confirmationStep = document.getElementById('confirmation-step');
+    const sampleImageContainer = document.getElementById('sample-image-container');
+    const regenerateButton = document.getElementById('regenerate-button') as HTMLButtonElement;
+    const confirmButton = document.getElementById('confirm-button') as HTMLButtonElement;
 
-    if (!imageUpload1 || !analyzeButton1 || !imagePreview1 || !promptInput1 ||
-        !imageUpload2 || !analyzeButton2 || !imagePreview2 || !promptInput2 || !characterEditor2 ||
-        !imageUploadProp || !analyzeButtonProp || !imagePreviewProp || !promptInputProp || !characterEditorProp ||
-        !imageUploadBackground || !analyzeButtonBackground || !imagePreviewBackground || !promptInputBackground || !characterEditorBackground ||
-        !descriptionSection || !generateButton || !imageGallery || !sceneInputRows || !aspectRatioSelect || !artStyleSelect) {
+
+    if (!controls || !imageUpload || !generateButton || !imagePreview || !modificationSelect || !artStyleSelect || !loadingIndicator || !imageGallery || !confirmationStep || !sampleImageContainer || !regenerateButton || !confirmButton) {
         console.error('Required HTML elements not found.');
         return;
     }
 
-    let uploadedFile1: File | null = null;
-    let uploadedFileParts1: { base64: string, mimeType: string } | null = null;
-    let uploadedFile2: File | null = null;
-    let uploadedFileParts2: { base64: string, mimeType: string } | null = null;
-    let uploadedFileProp: File | null = null;
-    let uploadedFilePartsProp: { base64: string, mimeType: string } | null = null;
-    let uploadedFileBackground: File | null = null;
-    let uploadedFilePartsBackground: { base64: string, mimeType: string } | null = null;
+    // State variables
+    let uploadedFile: File | null = null;
+    let basePrompt = '';
+    let uploadedFileParts: { base64: string; mimeType: string; } | null = null;
 
-    function checkAndShowSections() {
-        if (uploadedFileParts1) {
-            descriptionSection.classList.remove('hidden');
-        } else {
-            descriptionSection.classList.add('hidden');
-        }
 
-        characterEditor2.classList.toggle('hidden', !uploadedFileParts2);
-        characterEditorProp.classList.toggle('hidden', !uploadedFilePartsProp);
-        characterEditorBackground.classList.toggle('hidden', !uploadedFilePartsBackground);
-    }
-
-    imageUpload1.addEventListener('change', () => {
-        if (imageUpload1.files && imageUpload1.files.length > 0) {
-            uploadedFile1 = imageUpload1.files[0];
-            analyzeButton1.disabled = false;
+    imageUpload.addEventListener('change', () => {
+        if (imageUpload.files && imageUpload.files.length > 0) {
+            uploadedFile = imageUpload.files[0];
+            generateButton.disabled = false;
             const reader = new FileReader();
             reader.onload = (e) => {
-                imagePreview1.src = e.target?.result as string;
+                imagePreview.src = e.target?.result as string;
+                imagePreview.classList.remove('hidden');
             };
-            reader.readAsDataURL(uploadedFile1);
-            uploadedFileParts1 = null;
-            promptInput1.value = '';
-            checkAndShowSections();
+            reader.readAsDataURL(uploadedFile);
+            // Reset state on new image upload
+            imageGallery.innerHTML = '';
+            loadingIndicator.style.display = 'none';
+            confirmationStep.classList.add('hidden');
+            controls.classList.remove('hidden');
+            basePrompt = '';
+            uploadedFileParts = null;
+
         } else {
-            uploadedFile1 = null;
-            uploadedFileParts1 = null;
-            analyzeButton1.disabled = true;
-            checkAndShowSections();
+            uploadedFile = null;
+            generateButton.disabled = true;
+            imagePreview.classList.add('hidden');
         }
     });
+    
+    const generateSample = async () => {
+        if (!uploadedFile) return;
 
-    imageUpload2.addEventListener('change', () => {
-        if (imageUpload2.files && imageUpload2.files.length > 0) {
-            uploadedFile2 = imageUpload2.files[0];
-            analyzeButton2.disabled = false;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                imagePreview2.src = e.target?.result as string;
-            };
-            reader.readAsDataURL(uploadedFile2);
-            uploadedFileParts2 = null;
-            promptInput2.value = '';
-            checkAndShowSections();
-        } else {
-            uploadedFile2 = null;
-            uploadedFileParts2 = null;
-            analyzeButton2.disabled = true;
-            checkAndShowSections();
-        }
-    });
+        regenerateButton.disabled = true;
+        confirmButton.disabled = true;
+        loadingIndicator.style.color = '#f0f0f0';
+        loadingIndicator.style.display = 'block';
+        loadingIndicator.textContent = 'Generating sample image...';
 
-    imageUploadProp.addEventListener('change', () => {
-        if (imageUploadProp.files && imageUploadProp.files.length > 0) {
-            uploadedFileProp = imageUploadProp.files[0];
-            analyzeButtonProp.disabled = false;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                imagePreviewProp.src = e.target?.result as string;
-            };
-            reader.readAsDataURL(uploadedFileProp);
-            uploadedFilePartsProp = null;
-            promptInputProp.value = '';
-            checkAndShowSections();
-        } else {
-            uploadedFileProp = null;
-            uploadedFilePartsProp = null;
-            analyzeButtonProp.disabled = true;
-            checkAndShowSections();
-        }
-    });
-
-    imageUploadBackground.addEventListener('change', () => {
-        if (imageUploadBackground.files && imageUploadBackground.files.length > 0) {
-            uploadedFileBackground = imageUploadBackground.files[0];
-            analyzeButtonBackground.disabled = false;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                imagePreviewBackground.src = e.target?.result as string;
-            };
-            reader.readAsDataURL(uploadedFileBackground);
-            uploadedFilePartsBackground = null;
-            promptInputBackground.value = '';
-            checkAndShowSections();
-        } else {
-            uploadedFileBackground = null;
-            uploadedFilePartsBackground = null;
-            analyzeButtonBackground.disabled = true;
-            checkAndShowSections();
-        }
-    });
-
-
-    async function handleAnalysis(
-        file: File | null,
-        button: HTMLButtonElement,
-        promptInput: HTMLTextAreaElement,
-        descriptionGenerator: (base64: string, mimeType: string) => Promise<string>
-    ): Promise<{ base64: string, mimeType: string } | null> {
-        if (!file) {
-            alert('Please upload an image first.');
-            return null;
-        }
-
-        const originalButtonText = button.textContent;
         try {
-            button.disabled = true;
-            button.textContent = 'Analyzing...';
+            // 1. Analyze character (only if not already done)
+            if (!basePrompt || !uploadedFileParts) {
+                loadingIndicator.textContent = 'Analyzing character...';
+                uploadedFileParts = await fileToGenerativePart(uploadedFile);
+                basePrompt = await generateDescriptionFromImage(uploadedFileParts.base64, uploadedFileParts.mimeType);
+            }
             
-            const fileParts = await fileToGenerativePart(file);
-            const description = await descriptionGenerator(fileParts.base64, fileParts.mimeType);
+            loadingIndicator.textContent = 'Generating sample image...';
+
+            // 2. Generate one pose
+            const pose = poses[Math.floor(Math.random() * poses.length)];
+            const expression = expressions[Math.floor(Math.random() * expressions.length)];
+            const modification = modificationSelect.value;
+            const artStyle = artStyleSelect.value;
+            const modificationText = modification !== 'none' ? ` depicted ${modification}` : '';
+
+            let artStyleText = ` The art style MUST perfectly match the style of the reference image.`;
+            if (artStyle !== 'none') {
+                artStyleText = ` The final image should be rendered in a ${artStyle} style.`;
+            }
+
+            const fullPrompt = `Using the character description "${basePrompt}" and the provided image as the absolute ground truth for the character's appearance, redraw the character${modificationText}. The character must be in the following pose: '${pose}', with ${expression} on their face. It is absolutely crucial to maintain perfect consistency with the original character's facial features, hair, and overall identity.${artStyleText}`;
             
-            promptInput.value = description;
-            return fileParts;
+            await generateAndDisplayImage(fullPrompt, uploadedFileParts!.base64, uploadedFileParts!.mimeType, sampleImageContainer, true);
+
+            // 3. Show confirmation UI
+            controls.classList.add('hidden');
+            confirmationStep.classList.remove('hidden');
+            loadingIndicator.style.display = 'none';
 
         } catch (error) {
-            console.error(`Error during analysis:`, error);
-            alert('Could not analyze the image. Check the console for details.');
-            return null;
+            console.error("Error during sample generation:", error);
+            loadingIndicator.textContent = 'Error: Could not generate sample. Check console.';
+            loadingIndicator.style.color = 'red';
         } finally {
-             button.disabled = false;
-             button.textContent = originalButtonText;
+            regenerateButton.disabled = false;
+            confirmButton.disabled = false;
         }
     }
 
-    analyzeButton1.addEventListener('click', async () => {
-        uploadedFileParts1 = await handleAnalysis(uploadedFile1, analyzeButton1, promptInput1, generateDescriptionFromCharacterImage);
-        checkAndShowSections();
+    generateButton.addEventListener('click', async () => {
+        if (!uploadedFile) {
+            alert('Please upload an image first.');
+            return;
+        }
+        imageGallery.innerHTML = '';
+        await generateSample();
     });
 
-    analyzeButton2.addEventListener('click', async () => {
-        uploadedFileParts2 = await handleAnalysis(uploadedFile2, analyzeButton2, promptInput2, generateDescriptionFromCharacterImage);
-        checkAndShowSections();
-    });
+    regenerateButton.addEventListener('click', generateSample);
 
-    analyzeButtonProp.addEventListener('click', async () => {
-        uploadedFilePartsProp = await handleAnalysis(uploadedFileProp, analyzeButtonProp, promptInputProp, generateDescriptionFromPropImage);
-        checkAndShowSections();
-    });
-
-    analyzeButtonBackground.addEventListener('click', async () => {
-        uploadedFilePartsBackground = await handleAnalysis(uploadedFileBackground, analyzeButtonBackground, promptInputBackground, generateDescriptionFromBackgroundImage);
-        checkAndShowSections();
-    });
-
-    /**
-     * Kicks off the image generation process with a given set of poses.
-     * @param {string[]} posesToGenerate An array of pose description strings.
-     * @param {boolean} addRandomExpression Whether to add a random expression to the prompt.
-     */
-    async function startGeneration(posesToGenerate: string[], addRandomExpression: boolean) {
-        const basePrompt1 = promptInput1.value.trim();
-        const basePrompt2 = promptInput2.value.trim();
-        const basePromptProp = promptInputProp.value.trim();
-        const basePromptBackground = promptInputBackground.value.trim();
-        const aspectRatio = aspectRatioSelect.value;
-        const artStyle = artStyleSelect.value;
-
-        if (!basePrompt1 || !uploadedFileParts1) {
-            alert('Character 1 description and analysis data are required. Please upload and analyze the image.');
+    confirmButton.addEventListener('click', async () => {
+        if (!basePrompt || !uploadedFileParts) {
+            alert('Something went wrong, please start over.');
             return;
         }
 
-        if (uploadedFileParts2 && !basePrompt2) {
-             alert('Character 2 has an image uploaded but no description. Please analyze the character or clear the image.');
-             return;
-        }
-        
-        if (uploadedFilePartsProp && !basePromptProp) {
-             alert('The prop has an image uploaded but no description. Please analyze the prop or clear the image.');
-             return;
-        }
-
-        if (uploadedFilePartsBackground && !basePromptBackground) {
-             alert('The background has an image uploaded but no description. Please analyze the background or clear the image.');
-             return;
-        }
-        
-        const originalButtonText = generateButton.textContent;
         try {
-            generateButton.disabled = true;
-            generateButton.textContent = `Generating (${posesToGenerate.length})...`;
-            imageGallery.textContent = '';
+            regenerateButton.disabled = true;
+            confirmButton.disabled = true;
+            confirmationStep.classList.add('hidden');
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.style.color = '#f0f0f0';
 
-            const generationPromises = posesToGenerate.map(pose => {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'gallery-placeholder';
-                imageGallery.appendChild(placeholder);
+            // Move confirmed sample to main gallery
+            const sampleImg = sampleImageContainer.querySelector('img');
+            if (sampleImg) {
+                imageGallery.appendChild(sampleImg);
+            }
+
+            // Generate 4 more poses
+            const shuffledPoses = [...poses].sort(() => 0.5 - Math.random());
+            const selectedPoses = shuffledPoses.slice(0, 4);
+
+            loadingIndicator.textContent = `Generating ${selectedPoses.length} more poses...`;
+
+            const modification = modificationSelect.value;
+            const artStyle = artStyleSelect.value;
+
+            for (const pose of selectedPoses) {
+                const expression = expressions[Math.floor(Math.random() * expressions.length)];
+                const modificationText = modification !== 'none' ? ` depicted ${modification}` : '';
+                let artStyleText = ` The art style MUST perfectly match the style of the reference image.`;
+                if (artStyle !== 'none') {
+                    artStyleText = ` The final image should be rendered in a ${artStyle} style.`;
+                }
+                const fullPrompt = `Using the character description "${basePrompt}" and the provided image as the absolute ground truth for the character's appearance, redraw the character${modificationText}. The character must be in the following pose: '${pose}', with ${expression} on their face. It is absolutely crucial to maintain perfect consistency with the original character's facial features, hair, and overall identity.${artStyleText}`;
                 
-                const context: GenerationContext = {
-                    pose,
-                    addRandomExpression,
-                    imageParts1: uploadedFileParts1!,
-                    imageParts2: uploadedFileParts2,
-                    imagePartsProp: uploadedFilePartsProp,
-                    imagePartsBackground: uploadedFilePartsBackground,
-                    basePrompt1,
-                    basePrompt2,
-                    basePromptProp,
-                    basePromptBackground,
-                    aspectRatio,
-                    artStyle,
-                };
+                await generateAndDisplayImage(fullPrompt, uploadedFileParts.base64, uploadedFileParts.mimeType, imageGallery, false);
+            }
 
-                return generateAndDisplayImage(context, placeholder);
-            });
-            
-            await Promise.all(generationPromises);
+            loadingIndicator.style.display = 'none';
+            controls.classList.remove('hidden');
 
         } catch (error) {
-            console.error("Error during generation setup:", error);
-            alert('An unexpected error occurred. Check the console for details.');
+            console.error("Error during final generation process:", error);
+            loadingIndicator.textContent = 'Error: Could not generate images. Check the console for details.';
+            loadingIndicator.style.color = 'red';
         } finally {
+            regenerateButton.disabled = false;
+            confirmButton.disabled = false;
             generateButton.disabled = false;
-            generateButton.textContent = originalButtonText;
-        }
-    }
-    
-    generateButton.addEventListener('click', () => {
-        const posesToGenerate: string[] = [];
-
-        sceneInputRows.forEach(row => {
-            const input = row.querySelector('.scene-input') as HTMLInputElement;
-            const select = row.querySelector('.angle-select') as HTMLSelectElement;
-            const description = input.value.trim();
-            const angle = select.value.trim();
-
-            if (description) {
-                // Combine the angle and description into a single, clear instruction.
-                const finalPose = angle ? `${angle}: ${description}` : description;
-                posesToGenerate.push(finalPose);
-            }
-        });
-
-        if (posesToGenerate.length > 0) {
-            startGeneration(posesToGenerate, false);
-        } else {
-            // Use default poses if no custom poses are provided
-            const defaultPoses = uploadedFileParts2 ? twoCharacterPoses : singleCharacterPoses;
-            startGeneration(defaultPoses, true);
         }
     });
 }

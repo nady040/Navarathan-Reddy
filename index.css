@@ -1,7 +1,7 @@
 body {
   font-family: sans-serif;
   margin: 0;
-  padding: 10px 20px 40px;
+  padding: 10px 20px;
   background-color: #38383e;
   color: #f0f0f0;
 }
@@ -13,32 +13,12 @@ h1 {
   font-weight: 300;
 }
 
-h2 {
-    font-size: 1.5rem;
-    font-weight: 300;
-    margin-bottom: 0.5rem;
-}
-
-h3 {
-    font-size: 1.2rem;
-    font-weight: 300;
-    margin-bottom: 0.5rem;
-    text-align: center;
-}
-
 #controls {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 2rem;
-    margin-bottom: 2rem;
-}
-
-.character-control {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .upload-label {
@@ -71,135 +51,96 @@ input[type="file"]::file-selector-button:hover {
     background-color: #6a6a70;
 }
 
-#controls button,
-#description-section button {
+#controls select {
     padding: 0.8rem 1.5rem;
     font-size: 1rem;
-    background-color: #4CAF50;
+    background-color: #2c2c31;
+    color: #f0f0f0;
+    border: 2px solid #4a4a50;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 424px; /* Match input width */
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2724%27%20height%3D%2724%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20fill%3D%27%23f0f0f0%27%20d%3D%27M7%2010l5%205%205-5z%27%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+}
+
+#controls button,
+.confirmation-buttons button {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.2s;
-    min-width: 150px; /* Ensure button width is stable when text changes */
-    text-align: center;
 }
 
 #controls button:hover,
-#description-section button:hover {
-    background-color: #45a049;
+.confirmation-buttons button:hover {
+    opacity: 0.9;
 }
 
 #controls button:disabled,
-#description-section button:disabled {
+.confirmation-buttons button:disabled {
     background-color: #5a5a60;
     cursor: not-allowed;
+    opacity: 1;
+}
+
+#generate-button,
+#confirm-button {
+  background-color: #4CAF50;
+}
+#regenerate-button {
+  background-color: #6c757d;
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
-#description-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-#description-section p {
-    margin: 0;
-    color: #ccc;
-    text-align: center;
-}
-
-#description-editor {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2rem;
-    width: 100%;
-    max-width: 1200px;
-    align-items: flex-start;
-    justify-content: center;
-}
-
-.character-editor {
-    flex: 1;
-    min-width: 300px;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 550px;
-}
-
-#image-preview-1, #image-preview-2, #image-preview-prop, #image-preview-background {
-    width: 100%;
+#image-preview {
+    max-width: 200px;
     height: auto;
     object-fit: contain;
     border-radius: 8px;
     border: 4px solid #4a4a50;
 }
 
-
-#pose-customization-inline {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    max-width: 1200px;
-    margin-top: 1rem;
+#loading-indicator {
+    text-align: center;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    min-height: 1.5rem;
 }
 
-#scene-inputs-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    width: 100%;
-    padding: 0.5rem 0;
+#confirmation-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
-.scene-input-row {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
+#sample-image-container img {
+  max-width: 450px;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 4px solid #6a6a70;
 }
 
-.scene-input {
-    flex-grow: 1; /* take up remaining space */
-    background-color: #2c2c31;
-    color: #f0f0f0;
-    border: 2px solid #4a4a50;
-    border-radius: 8px;
-    padding: 0.8rem 1rem;
-    font-family: inherit;
-    font-size: 1rem;
-    box-sizing: border-box;
-}
-
-#prompt-input-1, #prompt-input-2, #prompt-input-prop, #prompt-input-background {
-    background-color: #2c2c31;
-    color: #f0f0f0;
-    border: 2px solid #4a4a50;
-    border-radius: 8px;
-    padding: 1rem;
-    font-family: inherit;
-    font-size: 1rem;
-    resize: vertical;
-    width: 100%;
-    box-sizing: border-box;
-    min-height: 200px;
-}
-
-@keyframes pulse {
-    0% { background-color: #3a3a40; }
-    50% { background-color: #4a4a50; }
-    100% { background-color: #3a3a40; }
-}
-
-@keyframes fadeIn {
-    to { opacity: 1; }
+.confirmation-buttons {
+  display: flex;
+  gap: 1rem;
 }
 
 #image-gallery {
@@ -208,140 +149,20 @@ input[type="file"]::file-selector-button:hover {
   gap: 16px;
   width: 100%;
   max-width: 1600px;
-  margin: 2rem auto 0;
+  margin: 0 auto;
 }
 
-.gallery-placeholder {
-    aspect-ratio: 1 / 1;
-    border-radius: 8px;
-    animation: pulse 1.5s infinite ease-in-out;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 1.5rem;
-    color: #f0f0f0;
-}
-
-.gallery-placeholder.generation-error {
-    background-color: #5a3a3a;
-    animation: none;
-    text-align: center;
-}
-
-.gallery-card {
-    position: relative;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 4px solid #4a4a50;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease-in-out;
-    line-height: 0; /* remove bottom space from image */
-}
-
-.gallery-card:hover {
-    transform: scale(1.03);
-}
-
-.gallery-card img {
+#image-gallery img {
   width: 100%;
   height: auto;
   object-fit: cover;
+  border: 4px solid #4a4a50;
   box-sizing: border-box;
-  opacity: 0;
-  animation: fadeIn 0.5s forwards;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease-in-out;
 }
 
-.gallery-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.gallery-card:hover .gallery-overlay {
-    opacity: 1;
-}
-
-.button-container {
-    display: flex;
-    gap: 1rem;
-}
-
-.download-button {
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.download-button:hover {
-    background-color: #66bb6a;
-}
-
-.regenerate-button {
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.regenerate-button:hover {
-    background-color: #0056b3;
-}
-
-
-#generation-controls {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    gap: 1.5rem;
-    margin-top: 2rem;
-    flex-wrap: wrap;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.form-group label {
-    text-align: left;
-    font-size: 0.9rem;
-    color: #ccc;
-}
-
-#aspect-ratio-select,
-#art-style-select,
-.angle-select {
-    background-color: #2c2c31;
-    color: #f0f0f0;
-    border: 2px solid #4a4a50;
-    border-radius: 5px;
-    padding: 0.8rem 1rem;
-    font-size: 1rem;
-    cursor: pointer;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cccccc' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.7rem center;
-    background-size: 1em;
-    padding-right: 2.5rem;
+#image-gallery img:hover {
+    transform: scale(1.03);
 }

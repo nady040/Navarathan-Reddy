@@ -3,161 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Character & Prop Pose Generator</title>
+    <title>Dynamic Pose Generator</title>
     <link rel="stylesheet" href="index.css">
     <script type="importmap">
       {
         "imports": {
-          "@google/genai": "https://esm.sh/@google/genai"
+          "@google/genai": "https://esm.sh/@google/genai@1.0.0"
         }
       }
     </script>
 </head>
 <body>
-    <h1>Character & Prop Pose Generator</h1>
+    <h1>Dynamic Pose Generator</h1>
     <div id="controls">
-        <div class="character-control">
-            <label for="image-upload-1" class="upload-label">1. Upload Character 1</label>
-            <input type="file" id="image-upload-1" accept="image/*">
-            <button id="analyze-button-1" disabled>Analyze Character 1</button>
-        </div>
-        <div class="character-control">
-            <label for="image-upload-2" class="upload-label">1. Upload Character 2 (Optional)</label>
-            <input type="file" id="image-upload-2" accept="image/*">
-            <button id="analyze-button-2" disabled>Analyze Character 2</button>
-        </div>
-        <div class="character-control">
-            <label for="image-upload-prop" class="upload-label">1. Upload Prop (Optional)</label>
-            <input type="file" id="image-upload-prop" accept="image/*">
-            <button id="analyze-button-prop" disabled>Analyze Prop</button>
-        </div>
-        <div class="character-control">
-            <label for="image-upload-background" class="upload-label">1. Upload Background (Optional)</label>
-            <input type="file" id="image-upload-background" accept="image/*">
-            <button id="analyze-button-background" disabled>Analyze Background</button>
-        </div>
+        <label for="image-upload" class="upload-label">1. Upload Your Character Image</label>
+        <input type="file" id="image-upload" accept="image/*">
+        <img id="image-preview" src="#" alt="Image preview" class="hidden"/>
+
+        <label for="modification-select" class="upload-label">2. Select a Modification (Optional)</label>
+        <select id="modification-select">
+            <option value="none">No modification</option>
+            <option value="as a 1-year-old kid">Change to a 1-year-old</option>
+            <option value="as a 5-year-old kid">Change to a 5-year-old</option>
+            <option value="as a female">Change gender to female</option>
+            <option value="as a male">Change gender to male</option>
+        </select>
+
+        <label for="art-style-select" class="upload-label">3. Select an Art Style (Optional)</label>
+        <select id="art-style-select">
+            <option value="none">Default style</option>
+            <option value="vibrant anime">Anime</option>
+            <option value="classic cartoon">Cartoon</option>
+            <option value="photorealistic">Realistic</option>
+            <option value="digital fantasy art">Fantasy Art</option>
+        </select>
+
+        <button id="generate-button" disabled>4. Generate Sample Pose</button>
     </div>
 
-    <div id="description-section" class="hidden">
-        <h2>2. Refine Descriptions</h2>
-        <p>Edit the descriptions below to improve consistency.</p>
-        <div id="description-editor">
-            <div class="character-editor">
-                <h3>Character 1</h3>
-                <img id="image-preview-1" src="#" alt="Your uploaded character 1" />
-                <textarea id="prompt-input-1" rows="15" placeholder="AI-generated description for character 1..."></textarea>
-            </div>
-            <div class="character-editor hidden" id="character-editor-2">
-                <h3>Character 2</h3>
-                <img id="image-preview-2" src="#" alt="Your uploaded character 2" />
-                <textarea id="prompt-input-2" rows="15" placeholder="AI-generated description for character 2..."></textarea>
-            </div>
-             <div class="character-editor hidden" id="character-editor-prop">
-                <h3>Prop</h3>
-                <img id="image-preview-prop" src="#" alt="Your uploaded prop" />
-                <textarea id="prompt-input-prop" rows="15" placeholder="AI-generated description for the prop..."></textarea>
-            </div>
-            <div class="character-editor hidden" id="character-editor-background">
-                <h3>Background</h3>
-                <img id="image-preview-background" src="#" alt="Your uploaded background" />
-                <textarea id="prompt-input-background" rows="15" placeholder="AI-generated description for the background..."></textarea>
-            </div>
-        </div>
-
-        <div id="pose-customization-inline">
-            <h2>3. Describe The Scenes (Optional)</h2>
-            <p>Describe up to 5 scenes. If left empty, default poses will be generated.</p>
-            <div id="scene-inputs-container">
-                <div class="scene-input-row">
-                    <input type="text" class="scene-input" placeholder="e.g., A thoughtful look into the distance.">
-                    <select class="angle-select">
-                        <option value="" selected>Default Angle</option>
-                        <option value="low-angle shot">Low Angle</option>
-                        <option value="high-angle shot">High Angle</option>
-                        <option value="wide-angle shot">Wide Angle</option>
-                        <option value="close-up shot">Close-up</option>
-                        <option value="profile view">Profile View</option>
-                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
-                    </select>
-                </div>
-                <div class="scene-input-row">
-                    <input type="text" class="scene-input" placeholder="e.g., Striking a heroic pose.">
-                     <select class="angle-select">
-                        <option value="" selected>Default Angle</option>
-                        <option value="low-angle shot">Low Angle</option>
-                        <option value="high-angle shot">High Angle</option>
-                        <option value="wide-angle shot">Wide Angle</option>
-                        <option value="close-up shot">Close-up</option>
-                        <option value="profile view">Profile View</option>
-                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
-                    </select>
-                </div>
-                <div class="scene-input-row">
-                    <input type="text" class="scene-input" placeholder="e.g., Shaking hands to seal an agreement.">
-                     <select class="angle-select">
-                        <option value="" selected>Default Angle</option>
-                        <option value="low-angle shot">Low Angle</option>
-                        <option value="high-angle shot">High Angle</option>
-                        <option value="wide-angle shot">Wide Angle</option>
-                        <option value="close-up shot">Close-up</option>
-                        <option value="profile view">Profile View</option>
-                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
-                    </select>
-                </div>
-                <div class="scene-input-row">
-                    <input type="text" class="scene-input" placeholder="e.g., Laughing together at a shared joke.">
-                     <select class="angle-select">
-                        <option value="" selected>Default Angle</option>
-                        <option value="low-angle shot">Low Angle</option>
-                        <option value="high-angle shot">High Angle</option>
-                        <option value="wide-angle shot">Wide Angle</option>
-                        <option value="close-up shot">Close-up</option>
-                        <option value="profile view">Profile View</option>
-                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
-                    </select>
-                </div>
-                <div class="scene-input-row">
-                    <input type="text" class="scene-input" placeholder="e.g., Working together to overcome an obstacle.">
-                     <select class="angle-select">
-                        <option value="" selected>Default Angle</option>
-                        <option value="low-angle shot">Low Angle</option>
-                        <option value="high-angle shot">High Angle</option>
-                        <option value="wide-angle shot">Wide Angle</option>
-                        <option value="close-up shot">Close-up</option>
-                        <option value="profile view">Profile View</option>
-                        <option value="over-the-shoulder shot">Over-the-shoulder</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        
-        <div id="generation-controls">
-            <div class="form-group">
-                <label for="art-style-select">Art Style</label>
-                <select id="art-style-select">
-                    <option value="" selected>Default (from image)</option>
-                    <option value="photorealistic">Photorealistic</option>
-                    <option value="anime">Anime</option>
-                    <option value="watercolor">Watercolor</option>
-                    <option value="cartoonish">Cartoon</option>
-                    <option value="pixel art">Pixel Art</option>
-                    <option value="impressionistic oil painting">Oil Painting</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="aspect-ratio-select">Aspect Ratio</label>
-                <select id="aspect-ratio-select">
-                    <option value="1:1" selected>Square (1:1)</option>
-                    <option value="9:16">Portrait (9:16)</option>
-                    <option value="16:9">Landscape (16:9)</option>
-                    <option value="3:4">Portrait (3:4)</option>
-                    <option value="4:3">Landscape (4:3)</option>
-                </select>
-            </div>
-            <button id="generate-button">Generate Poses</button>
-        </div>
+    <div id="confirmation-step" class="hidden">
+      <h2>Does this look right?</h2>
+      <p>We'll use this style and character as a reference for the other poses.</p>
+      <div id="sample-image-container"></div>
+      <div class="confirmation-buttons">
+        <button id="regenerate-button">Regenerate Sample</button>
+        <button id="confirm-button">Looks Good, Generate More!</button>
+      </div>
     </div>
 
+
+    <p id="loading-indicator"></p>
     <div id="image-gallery"></div>
     <script type="module" src="index.tsx"></script>
 </body>

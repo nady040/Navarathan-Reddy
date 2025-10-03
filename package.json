@@ -1,5 +1,5 @@
 {
-  "name": "pose-generator",
+  "name": "dynamic-pose-generator",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "latest"
+    "@google/genai": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
